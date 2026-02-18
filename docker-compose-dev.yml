@@ -32,3 +32,59 @@ services:
       - pgadmin_theater_data:/var/lib/pgadmin
     networks:
       - theater_network
+
+  web:
+    restart: always
+    build: .
+    container_name: backend_theater
+    command: [ "/bin/bash", "/commands/run_web_server_dev.sh" ]
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/usr/src/fastapi
+      - WATCHFILES_FORCE_POLLING=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+
+  migrator:
+    build: .
+    container_name: alembic_migrator_theater
+    command: ["/bin/bash", "/commands/run_migration.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src:/usr/src/fastapi
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    networks:
+      - theater_network
+
+  mailhog:
+    restart: always
+    build:
+      context: .
+      dockerfile: ./docker/mailhog/Dockerfile
+    container_name: mailhog_theater
+    command: ["/bin/bash", "-c", "/commands/setup_mailhog_auth.sh && ~/go/bin/MailHog"]
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    env_file:
+      - .env
+    environment:
+      MH_AUTH_FILE: /mailhog.auth
+    networks:
+      - theater_network
