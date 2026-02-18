@@ -1,13 +1,16 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from src.routes import (
+    accounts_router,
+    profiles_router,
+)
 
+app = FastAPI(
+    title="Movies homework",
+    description="Description of project"
+)
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+api_version_prefix = "/api/v1"
 
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+app.include_router(accounts_router, prefix=f"{api_version_prefix}/accounts", tags=["accounts"])
+app.include_router(profiles_router, prefix=f"{api_version_prefix}/profiles", tags=["profiles"])
