@@ -10,16 +10,7 @@ from src.database.models.accounts import (
     RefreshTokenModel,
     UserProfileModel
 )
-from src.database.models.movies import (
-    MovieModel,
-    LanguageModel,
-    ActorModel,
-    GenreModel,
-    CountryModel,
-    MoviesGenresModel,
-    ActorsMoviesModel,
-    MoviesLanguagesModel
-)
+
 from src.database.session_sqlite import reset_sqlite_database as reset_database
 from src.database.validators import accounts as accounts_validators
 
