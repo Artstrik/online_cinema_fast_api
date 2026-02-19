@@ -1,0 +1,2 @@
+class MovieModel:
+    pass
