@@ -8,7 +8,7 @@ services:
       - "5432:5432"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - postgres_theater_data:/var/lib/postgresql/data/
+      - postgres_theater_data:/var/lib/postgresql/
     networks:
       - theater_network
     healthcheck:
@@ -37,7 +37,7 @@ services:
     restart: always
     build: .
     container_name: backend_theater
-    command: [ "/bin/bash", "/commands/run_web_server_dev.sh" ]
+    command: [ "/bin/bash", "/commands/run_web_server_prod.sh" ]
     env_file:
       - .env
     environment:
@@ -78,7 +78,7 @@ services:
       context: .
       dockerfile: ./docker/mailhog/Dockerfile
     container_name: mailhog_theater
-    command: ["/bin/bash", "-c", "/commands/setup_mailhog_auth.sh && ~/go/bin/MailHog"]
+    command: ["MailHog", "-auth-file=/mailhog.auth"]
     ports:
       - "8025:8025"
       - "1025:1025"
@@ -108,6 +108,20 @@ services:
     networks:
       - theater_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
+    ports:
+      - "6379:6379"
+    networks:
+      - theater_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
   minio_mc:
     build:
       context: .
@@ -121,6 +135,80 @@ services:
       - .env
     networks:
       - theater_network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+    env_file:
+      - ./docker/nginx/.env
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    command: celery -A src.celery_app worker --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+    restart: always
+
+  celery_beat:
+    build: .
+    container_name: celery_beat_theater
+    command: celery -A src.celery_app beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+    restart: always
+
+  flower:
+    build: .
+    container_name: flower_theater
+    command: celery -A src.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi
+    networks:
+      - theater_network
+    restart: always
 
 volumes:
   postgres_theater_data:
