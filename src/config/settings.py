@@ -1,5 +1,4 @@
 import os
-import secrets
 from pathlib import Path
 from typing import Any
 
@@ -44,9 +43,19 @@ class Settings(BaseAppSettings):
     POSTGRES_DB_PORT: int = int(os.getenv("POSTGRES_DB_PORT", 5432))
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "test_db")
 
-    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", secrets.token_urlsafe(32))
-    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", secrets.token_urlsafe(32))
+    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", "dev-secret-key-change-in-production-min-32-chars")
+    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", "dev-refresh-key-change-in-production-min-32-chars")
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
+
+    # Redis configuration
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "redis_theater")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
+
+    # Stripe configuration
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
     @property
     def DATABASE_URL(self) -> str:
