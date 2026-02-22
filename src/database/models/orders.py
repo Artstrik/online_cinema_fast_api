@@ -9,7 +9,7 @@ from sqlalchemy import ForeignKey, DateTime, DECIMAL, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 
-from src.database import Base
+from src.database.models.base import Base
 
 
 class OrderStatusEnum(str, Enum):

@@ -30,6 +30,23 @@ from src.database.models.movies import (
     MovieStatusEnum,
 )
 
+from src.database.models.cart import (
+    CartModel,
+    CartItemModel,
+)
+
+from src.database.models.orders import (
+    OrderModel,
+    OrderItemModel,
+    OrderStatusEnum,
+)
+
+from src.database.models.payments import (
+    PaymentModel,
+    PaymentItemModel,
+    PaymentStatusEnum,
+)
+
 __all__ = [
     # Account models
     "UserModel",
@@ -53,5 +70,15 @@ __all__ = [
     "MovieFavoriteModel",
     "MovieRatingModel",
     "MovieStatusEnum",
-
+    # Cart models
+    "CartModel",
+    "CartItemModel",
+    # Order models
+    "OrderModel",
+    "OrderItemModel",
+    "OrderStatusEnum",
+    # Payment models
+    "PaymentModel",
+    "PaymentItemModel",
+    "PaymentStatusEnum",
 ]
