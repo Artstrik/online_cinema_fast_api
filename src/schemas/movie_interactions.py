@@ -67,12 +67,34 @@ class MovieCommentDetailSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Backward/route-friendly alias
+MovieCommentResponseSchema = MovieCommentDetailSchema
+
+
 class MovieCommentListResponseSchema(BaseModel):
     """Schema for list of comments."""
     comments: List[MovieCommentDetailSchema]
-    total_comments: int
     page: int
     per_page: int
+    total_pages: int
+    total_items: int
+
+
+class MovieFavoriteAddSchema(BaseModel):
+    """Response schema for adding to favorites."""
+    message: str = "Movie added to favorites"
+
+
+class MovieFavoriteRemoveSchema(BaseModel):
+    """Response schema for removing from favorites."""
+    message: str = "Movie removed from favorites"
+
+
+class CommentLikeResponseSchema(BaseModel):
+    """Response schema for toggling comment like."""
+    comment_id: int
+    likes_count: int
+    user_liked: bool
 
 
 class MovieFavoriteCreateSchema(BaseModel):
@@ -107,6 +129,14 @@ class MovieInFavoritesSchema(BaseModel):
     added_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class FavoritesListResponseSchema(BaseModel):
+    """Unified favorites list schema (route-friendly)."""
+    favorites: List[MovieInFavoritesSchema]
+    page: int
+    per_page: int
+    total_pages: int
+    total_items: int
 
 
 class MovieFavoritesListResponseSchema(BaseModel):
