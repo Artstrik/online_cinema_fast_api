@@ -59,7 +59,7 @@ services:
   migrator:
     build: .
     container_name: alembic_migrator_theater
-    command: ["/bin/bash", "/commands/run_migration.sh"]
+    command: ["/bin/bash", "/commands/run_migrations.sh"]
     depends_on:
       db:
         condition: service_healthy
@@ -105,6 +105,53 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - theater_network
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
+    ports:
+      - "6379:6379"
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "worker", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    networks:
+      - theater_network
+
+  celery_beat:
+    build: .
+    container_name: celery_beat_theater
+    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "beat", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    networks:
+      - theater_network
+
+  flower:
+    build: .
+    container_name: flower_theater
+    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "flower", "--port=5555"]
+    env_file:
+      - .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
     networks:
       - theater_network
 

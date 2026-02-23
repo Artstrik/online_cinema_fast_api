@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from src.database import get_db, MovieModel
+from src.database.models import UserGroupEnum
 from src.database import (
     CountryModel,
     GenreModel,
@@ -17,6 +18,7 @@ from src.schemas import (
     MovieDetailSchema
 )
 from src.schemas.movies import MovieCreateSchema, MovieUpdateSchema
+from src.security.http import require_roles
 
 router = APIRouter()
 
@@ -94,8 +96,8 @@ async def get_movie_list(
 
     response = MovieListResponseSchema(
         movies=movie_list,
-        prev_page=f"/theater/movies/?page={page - 1}&per_page={per_page}" if page > 1 else None,
-        next_page=f"/theater/movies/?page={page + 1}&per_page={per_page}" if page < total_pages else None,
+        prev_page=f"/api/v1/movies/?page={page - 1}&per_page={per_page}" if page > 1 else None,
+        next_page=f"/api/v1/movies/?page={page + 1}&per_page={per_page}" if page < total_pages else None,
         total_pages=total_pages,
         total_items=total_items,
     )
@@ -129,7 +131,8 @@ async def get_movie_list(
 )
 async def create_movie(
         movie_data: MovieCreateSchema,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        _=Depends(require_roles(UserGroupEnum.MODERATOR, UserGroupEnum.ADMIN))
 ) -> MovieDetailSchema:
     """
     Add a new movie to the database.
@@ -320,11 +323,13 @@ async def get_movie_by_id(
             },
         },
     },
-    status_code=204
+    status_code=200,
+    response_class=Response
 )
 async def delete_movie(
         movie_id: int,
         db: AsyncSession = Depends(get_db),
+        _=Depends(require_roles(UserGroupEnum.MODERATOR, UserGroupEnum.ADMIN))
 ):
     """
     Delete a specific movie by its ID.
@@ -389,6 +394,7 @@ async def update_movie(
         movie_id: int,
         movie_data: MovieUpdateSchema,
         db: AsyncSession = Depends(get_db),
+        _=Depends(require_roles(UserGroupEnum.MODERATOR, UserGroupEnum.ADMIN))
 ):
     """
     Update a specific movie by its ID.

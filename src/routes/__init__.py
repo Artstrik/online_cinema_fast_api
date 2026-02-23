@@ -4,3 +4,4 @@ from src.routes.profiles import router as profiles_router
 from src.routes.cart import router as cart_router
 from src.routes.orders import router as orders_router
 from src.routes.payments import router as payments_router
+from src.routes.movie_interaction import router as movie_interaction_router

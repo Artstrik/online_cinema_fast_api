@@ -28,6 +28,10 @@ from src.database.models.movies import (
     MovieFavoriteModel,
     MovieRatingModel,
     MovieStatusEnum,
+    MoviesGenresModel,
+    ActorsMoviesModel,
+    MoviesLanguagesModel,
+    DirectorsMoviesModel,
 )
 
 from src.database.models.cart import (
@@ -70,6 +74,10 @@ __all__ = [
     "MovieFavoriteModel",
     "MovieRatingModel",
     "MovieStatusEnum",
+    "MoviesGenresModel",
+    "ActorsMoviesModel",
+    "MoviesLanguagesModel",
+    "DirectorsMoviesModel",
     # Cart models
     "CartModel",
     "CartItemModel",
