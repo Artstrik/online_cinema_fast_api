@@ -9,7 +9,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from src.selery_app import celery_app
+from src.celery_app import celery_app
 from src.config import get_settings
 from src.database.models import ActivationTokenModel, PasswordResetTokenModel, RefreshTokenModel
 

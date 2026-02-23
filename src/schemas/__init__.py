@@ -15,5 +15,27 @@ from src.schemas.accounts import (
     UserLoginResponseSchema,
     UserLoginRequestSchema,
     TokenRefreshRequestSchema,
-    TokenRefreshResponseSchema
+    TokenRefreshResponseSchema,
+    ResendActivationSchema,
+    ChangePasswordSchema,
+    LogoutResponseSchema,
+    LogoutRequestSchema,
+    AdminActivateUserResponseSchema,
+    AdminChangeUserGroupRequestSchema,
+    AdminChangeUserGroupResponseSchema,
+)
+from src.schemas.movie_interactions import (
+    MovieLikeCreateSchema,
+    MovieLikeResponseSchema,
+    MovieLikeStatsSchema,
+    MovieCommentCreateSchema,
+    MovieCommentDetailSchema,
+    MovieCommentListResponseSchema,
+    MovieCommentUpdateSchema,
+    MovieFavoriteResponseSchema,
+    MovieFavoriteDeleteResponseSchema,
+    MovieFavoritesListResponseSchema,
+    MovieRatingCreateSchema,
+    MovieRatingResponseSchema,
+    MovieRatingStatsSchema,
 )
