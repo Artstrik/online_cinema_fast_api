@@ -42,9 +42,7 @@ class CartService:
 
     @staticmethod
     async def add_movie_to_cart(
-            user_id: int,
-            movie_id: int,
-            db: AsyncSession
+        user_id: int, movie_id: int, db: AsyncSession
     ) -> CartItemModel:
         """
         Add a movie to user's cart with validation.
@@ -68,7 +66,7 @@ class CartService:
         if not movie:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Movie with ID {movie_id} not found"
+                detail=f"Movie with ID {movie_id} not found",
             )
 
         # Check if movie was already purchased by this user
@@ -78,14 +76,14 @@ class CartService:
             .where(
                 OrderItemModel.movie_id == movie_id,
                 OrderItemModel.order.has(user_id=user_id),
-                OrderItemModel.order.has(status='paid')
+                OrderItemModel.order.has(status="paid"),
             )
         )
         result = await db.execute(stmt)
         if result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"You have already purchased '{movie.name}'. Repeat purchases are not allowed."
+                detail=f"You have already purchased '{movie.name}'. Repeat purchases are not allowed.",
             )
 
         # Get or create cart
@@ -93,8 +91,7 @@ class CartService:
 
         # Check if movie is already in cart
         stmt = select(CartItemModel).where(
-            CartItemModel.cart_id == cart.id,
-            CartItemModel.movie_id == movie_id
+            CartItemModel.cart_id == cart.id, CartItemModel.movie_id == movie_id
         )
         result = await db.execute(stmt)
         existing_item = result.scalars().first()
@@ -102,14 +99,11 @@ class CartService:
         if existing_item:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Movie '{movie.name}' is already in your cart"
+                detail=f"Movie '{movie.name}' is already in your cart",
             )
 
         # Add movie to cart
-        cart_item = CartItemModel(
-            cart_id=cart.id,
-            movie_id=movie_id
-        )
+        cart_item = CartItemModel(cart_id=cart.id, movie_id=movie_id)
         db.add(cart_item)
         await db.commit()
         await db.refresh(cart_item)
@@ -127,9 +121,7 @@ class CartService:
 
     @staticmethod
     async def remove_movie_from_cart(
-            user_id: int,
-            movie_id: int,
-            db: AsyncSession
+        user_id: int, movie_id: int, db: AsyncSession
     ) -> None:
         """
         Remove a movie from user's cart.
@@ -149,22 +141,19 @@ class CartService:
 
         if not cart:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Cart not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Cart not found"
             )
 
         # Find cart item
         stmt = select(CartItemModel).where(
-            CartItemModel.cart_id == cart.id,
-            CartItemModel.movie_id == movie_id
+            CartItemModel.cart_id == cart.id, CartItemModel.movie_id == movie_id
         )
         result = await db.execute(stmt)
         cart_item = result.scalars().first()
 
         if not cart_item:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Movie not found in cart"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found in cart"
             )
 
         await db.delete(cart_item)
@@ -172,8 +161,7 @@ class CartService:
 
     @staticmethod
     async def get_cart_with_items(
-            user_id: int,
-            db: AsyncSession
+        user_id: int, db: AsyncSession
     ) -> Tuple[CartModel, int, Decimal]:
         """
         Get user's cart with items and calculate totals.
@@ -188,9 +176,7 @@ class CartService:
         # Get cart with items and movies
         stmt = (
             select(CartModel)
-            .options(
-                joinedload(CartModel.items).joinedload(CartItemModel.movie)
-            )
+            .options(joinedload(CartModel.items).joinedload(CartItemModel.movie))
             .where(CartModel.user_id == user_id)
         )
         result = await db.execute(stmt)
@@ -202,12 +188,10 @@ class CartService:
             db.add(cart)
             await db.commit()
             await db.refresh(cart)
-            return cart, 0, Decimal('0.00')
+            return cart, 0, Decimal("0.00")
 
         items_count = len(cart.items)
-        total_price = sum(
-            Decimal(str(item.movie.price)) for item in cart.items
-        )
+        total_price = sum(Decimal(str(item.movie.price)) for item in cart.items)
 
         return cart, items_count, total_price
 

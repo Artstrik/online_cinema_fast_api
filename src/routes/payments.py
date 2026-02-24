@@ -24,12 +24,12 @@ router = APIRouter(prefix="/payments", tags=["Payments"])
     status_code=status.HTTP_201_CREATED,
     summary="Create payment intent",
     description="Create a Stripe payment intent for an order. "
-                "Returns client secret for frontend payment confirmation."
+    "Returns client secret for frontend payment confirmation.",
 )
 async def create_payment_intent(
-        order_id: int = Query(..., description="Order ID to pay for"),
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    order_id: int = Query(..., description="Order ID to pay for"),
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> PaymentIntentResponseSchema:
     """
     Create a payment intent for an order.
@@ -39,9 +39,7 @@ async def create_payment_intent(
     Returns payment ID and client secret for Stripe.js
     """
     result = await PaymentService.create_payment_intent(
-        order_id=order_id,
-        user_id=current_user.id,
-        db=db
+        order_id=order_id, user_id=current_user.id, db=db
     )
 
     return PaymentIntentResponseSchema(**result)
@@ -53,12 +51,12 @@ async def create_payment_intent(
     status_code=status.HTTP_200_OK,
     summary="Confirm payment",
     description="Confirm payment after user completes payment in Stripe. "
-                "Updates order status to PAID and sends confirmation email."
+    "Updates order status to PAID and sends confirmation email.",
 )
 async def confirm_payment(
-        payment_id: int = Query(..., description="Payment ID to confirm"),
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    payment_id: int = Query(..., description="Payment ID to confirm"),
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> PaymentDetailSchema:
     """
     Confirm payment completion.
@@ -68,9 +66,7 @@ async def confirm_payment(
     Updates order status and sends email confirmation.
     """
     payment = await PaymentService.confirm_payment(
-        payment_id=payment_id,
-        user_id=current_user.id,
-        db=db
+        payment_id=payment_id, user_id=current_user.id, db=db
     )
 
     return PaymentDetailSchema.model_validate(payment)
@@ -81,12 +77,9 @@ async def confirm_payment(
     status_code=status.HTTP_200_OK,
     summary="Stripe webhook",
     description="Handle webhooks from Stripe for payment status updates. "
-                "This endpoint is called by Stripe, not by users."
+    "This endpoint is called by Stripe, not by users.",
 )
-async def stripe_webhook(
-        request: Request,
-        db: AsyncSession = Depends(get_db)
-):
+async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """
     Handle Stripe webhook events.
 
@@ -111,14 +104,14 @@ async def stripe_webhook(
     response_model=PaymentListResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Get payment history",
-    description="Get user's payment history with pagination and filtering."
+    description="Get user's payment history with pagination and filtering.",
 )
 async def get_payments(
-        page: int = Query(1, ge=1, description="Page number"),
-        per_page: int = Query(10, ge=1, le=50, description="Items per page"),
-        status_filter: Optional[str] = Query(None, description="Filter by status"),
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(10, ge=1, le=50, description="Items per page"),
+    status_filter: Optional[str] = Query(None, description="Filter by status"),
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> PaymentListResponseSchema:
     """
     Get user's payment history.
@@ -134,20 +127,16 @@ async def get_payments(
         db=db,
         page=page,
         per_page=per_page,
-        status_filter=status_filter
+        status_filter=status_filter,
     )
 
     # Convert to list items
     payment_items = [
-        PaymentListItemSchema.model_validate(payment)
-        for payment in payments
+        PaymentListItemSchema.model_validate(payment) for payment in payments
     ]
 
     return PaymentListResponseSchema(
-        payments=payment_items,
-        total_payments=total_items,
-        page=page,
-        per_page=per_page
+        payments=payment_items, total_payments=total_items, page=page, per_page=per_page
     )
 
 
@@ -156,12 +145,12 @@ async def get_payments(
     response_model=PaymentDetailSchema,
     status_code=status.HTTP_200_OK,
     summary="Get payment details",
-    description="Get detailed information about a specific payment."
+    description="Get detailed information about a specific payment.",
 )
 async def get_payment(
-        payment_id: int,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    payment_id: int,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> PaymentDetailSchema:
     """
     Get payment details by ID.
@@ -172,9 +161,7 @@ async def get_payment(
     Only accessible by the payment owner.
     """
     payment = await PaymentService.get_payment_by_id(
-        payment_id=payment_id,
-        user_id=current_user.id,
-        db=db
+        payment_id=payment_id, user_id=current_user.id, db=db
     )
 
     return PaymentDetailSchema.model_validate(payment)
@@ -186,13 +173,13 @@ async def get_payment(
     status_code=status.HTTP_200_OK,
     summary="Request refund",
     description="Request a refund for a successful payment. "
-                "Creates a refund request that will be processed by admins."
+    "Creates a refund request that will be processed by admins.",
 )
 async def request_refund(
-        payment_id: int,
-        refund_data: PaymentRefundSchema,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    payment_id: int,
+    refund_data: PaymentRefundSchema,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> PaymentRefundResponseSchema:
     """
     Request a payment refund.
@@ -207,12 +194,12 @@ async def request_refund(
         user_id=current_user.id,
         amount=refund_data.amount,
         reason=refund_data.reason,
-        db=db
+        db=db,
     )
 
     return PaymentRefundResponseSchema(
         message="Refund requested successfully. It will be processed by our team.",
         payment_id=payment.id,
         refund_amount=refund_data.amount or payment.amount,
-        status=payment.status
+        status=payment.status,
     )

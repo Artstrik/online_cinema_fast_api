@@ -7,10 +7,14 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 
 from src.database.models.base import Base
+from src.database.models.accounts import UserModel
+from src.database.models.orders import OrderModel
+from src.database.models.orders import OrderItemModel
 
 
 class PaymentStatusEnum(str, Enum):
     """Enumeration of possible payment statuses."""
+
     SUCCESSFUL = "successful"
     CANCELED = "canceled"
     REFUNDED = "refunded"
@@ -22,43 +26,34 @@ class PaymentModel(Base):
     """
     Model representing a payment transaction made by a user for an order.
     """
+
     __tablename__ = "payments"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("orders.id", ondelete="CASCADE"), nullable=False
     )
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     status: Mapped[PaymentStatusEnum] = mapped_column(
         SQLAlchemyEnum(PaymentStatusEnum),
         default=PaymentStatusEnum.PENDING,
-        nullable=False
+        nullable=False,
     )
-    amount: Mapped[float] = mapped_column(
-        DECIMAL(10, 2),
-        nullable=False
-    )
+    amount: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
     external_payment_id: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True
+        String(255), nullable=True
     )
 
     # Relationships
     user: Mapped["UserModel"] = relationship("UserModel", back_populates="payments")
     order: Mapped["OrderModel"] = relationship("OrderModel", back_populates="payments")
     items: Mapped[list["PaymentItemModel"]] = relationship(
-        "PaymentItemModel",
-        back_populates="payment",
-        cascade="all, delete-orphan"
+        "PaymentItemModel", back_populates="payment", cascade="all, delete-orphan"
     )
 
     def __repr__(self):
@@ -73,25 +68,25 @@ class PaymentItemModel(Base):
     Model representing an individual item paid for in a single payment.
     Mirrors an order line item at the time of payment.
     """
+
     __tablename__ = "payment_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     payment_id: Mapped[int] = mapped_column(
-        ForeignKey("payments.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("payments.id", ondelete="CASCADE"), nullable=False
     )
     order_item_id: Mapped[int] = mapped_column(
-        ForeignKey("order_items.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False
     )
-    price_at_payment: Mapped[float] = mapped_column(
-        DECIMAL(10, 2),
-        nullable=False
-    )
+    price_at_payment: Mapped[float] = mapped_column(DECIMAL(10, 2), nullable=False)
 
     # Relationships
-    payment: Mapped["PaymentModel"] = relationship("PaymentModel", back_populates="items")
-    order_item: Mapped["OrderItemModel"] = relationship("OrderItemModel", back_populates="payment_items")
+    payment: Mapped["PaymentModel"] = relationship(
+        "PaymentModel", back_populates="items"
+    )
+    order_item: Mapped["OrderItemModel"] = relationship(
+        "OrderItemModel", back_populates="payment_items"
+    )
 
     def __repr__(self):
         return (

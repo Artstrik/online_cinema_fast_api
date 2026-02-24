@@ -71,7 +71,9 @@ async def remove_movie_like(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Remove user's like/dislike from a movie."""
-    await MovieInteractionService.remove_like(movie_id=movie_id, user_id=current_user.id, db=db)
+    await MovieInteractionService.remove_like(
+        movie_id=movie_id, user_id=current_user.id, db=db
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -193,7 +195,9 @@ async def delete_comment(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Delete own comment."""
-    await MovieInteractionService.delete_comment(comment_id=comment_id, user_id=current_user.id, db=db)
+    await MovieInteractionService.delete_comment(
+        comment_id=comment_id, user_id=current_user.id, db=db
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -234,9 +238,7 @@ async def add_to_favorites(
 ) -> MovieFavoriteResponseSchema:
     """Add a movie to user's favorites."""
     favorite = await MovieInteractionService.add_to_favorites(
-        movie_id=movie_id,
-        user_id=current_user.id,
-        db=db
+        movie_id=movie_id, user_id=current_user.id, db=db
     )
     return MovieFavoriteResponseSchema.model_validate(favorite)
 
@@ -254,9 +256,7 @@ async def remove_from_favorites(
 ) -> MovieFavoriteDeleteResponseSchema:
     """Remove a movie from user's favorites."""
     await MovieInteractionService.remove_from_favorites(
-        movie_id=movie_id,
-        user_id=current_user.id,
-        db=db
+        movie_id=movie_id, user_id=current_user.id, db=db
     )
     return MovieFavoriteDeleteResponseSchema(movie_id=movie_id)
 
@@ -270,7 +270,9 @@ async def remove_from_favorites(
 async def list_favorites(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(10, ge=1, le=50, description="Items per page"),
-    search: Optional[str] = Query(None, description="Search by title/description/actor/director"),
+    search: Optional[str] = Query(
+        None, description="Search by title/description/actor/director"
+    ),
     year: Optional[int] = Query(None, description="Filter by release year"),
     imdb_min: Optional[float] = Query(None, description="Filter by min IMDb rating"),
     sort_by: str = Query("added_at", description="Sort by: added_at|price|year|imdb"),
@@ -340,7 +342,9 @@ async def remove_rating(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Remove user's rating from a movie."""
-    await MovieInteractionService.remove_rating(movie_id=movie_id, user_id=current_user.id, db=db)
+    await MovieInteractionService.remove_rating(
+        movie_id=movie_id, user_id=current_user.id, db=db
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

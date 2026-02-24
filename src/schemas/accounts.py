@@ -1,15 +1,14 @@
 from pydantic import BaseModel, EmailStr, field_validator
 
 from src.database import accounts_validators
+from src.database.models import UserGroupEnum
 
 
 class BaseEmailPasswordSchema(BaseModel):
     email: EmailStr
     password: str
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
     @field_validator("email")
     @classmethod
@@ -48,9 +47,7 @@ class UserRegistrationResponseSchema(BaseModel):
     id: int
     email: EmailStr
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 
 class UserActivationRequestSchema(BaseModel):
@@ -73,11 +70,13 @@ class TokenRefreshResponseSchema(BaseModel):
 
 class ResendActivationSchema(BaseModel):
     """Schema for resending activation link."""
+
     email: EmailStr
 
 
 class ChangePasswordSchema(BaseModel):
     """Schema for changing password."""
+
     old_password: str
     new_password: str
 
@@ -89,16 +88,39 @@ class ChangePasswordSchema(BaseModel):
 
 class LogoutResponseSchema(BaseModel):
     """Schema for logout response."""
+
     message: str = "Logged out successfully"
+
+
+class LogoutRequestSchema(BaseModel):
+    """Schema for logout request payload."""
+
+    refresh_token: str
 
 
 class AdminActivateUserSchema(BaseModel):
     """Schema for admin user activation."""
+
     user_id: int
 
 
 class AdminActivateUserResponseSchema(BaseModel):
     """Schema for admin activation response."""
+
     message: str
     user_id: int
     is_active: bool
+
+
+class AdminChangeUserGroupRequestSchema(BaseModel):
+    """Schema for admin group update payload."""
+
+    group_name: UserGroupEnum
+
+
+class AdminChangeUserGroupResponseSchema(BaseModel):
+    """Schema for admin group update response."""
+
+    message: str
+    user_id: int
+    group_name: UserGroupEnum

@@ -23,7 +23,7 @@ def get_token(request: Request) -> str:
     if not authorization:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header is missing"
+            detail="Authorization header is missing",
         )
 
     scheme, _, token = authorization.partition(" ")
@@ -31,16 +31,16 @@ def get_token(request: Request) -> str:
     if scheme.lower() != "bearer" or not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format. Expected 'Bearer <token>'"
+            detail="Invalid Authorization header format. Expected 'Bearer <token>'",
         )
 
     return token
 
 
 async def get_current_active_user(
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
-        db: AsyncSession = Depends(get_db),
+    token: str = Depends(get_token),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    db: AsyncSession = Depends(get_db),
 ) -> UserModel:
     """
     Get current authenticated and active user from JWT token.
@@ -89,16 +89,16 @@ async def get_current_active_user(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is not active"
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is not active"
         )
 
     return user
 
+
 async def get_current_active_user_optional(
-        request: Request,
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
-        db: AsyncSession = Depends(get_db),
+    request: Request,
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    db: AsyncSession = Depends(get_db),
 ) -> UserModel | None:
     """
     Return current active user when Authorization header is present.
@@ -132,12 +132,14 @@ async def get_current_active_user_optional(
 def require_roles(*roles: UserGroupEnum) -> Callable[[UserModel], UserModel]:
     """Dependency factory to enforce role-based access control."""
 
-    async def role_checker(current_user: UserModel = Depends(get_current_active_user)) -> UserModel:
+    async def role_checker(
+        current_user: UserModel = Depends(get_current_active_user),
+    ) -> UserModel:
         if current_user.group.name not in roles:
             allowed = ", ".join(role.value for role in roles)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. Required roles: {allowed}."
+                detail=f"Insufficient permissions. Required roles: {allowed}.",
             )
         return current_user
 

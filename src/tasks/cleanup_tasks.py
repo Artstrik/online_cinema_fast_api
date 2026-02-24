@@ -11,7 +11,11 @@ from sqlalchemy.orm import sessionmaker
 
 from src.celery_app import celery_app
 from src.config import get_settings
-from src.database.models import ActivationTokenModel, PasswordResetTokenModel, RefreshTokenModel
+from src.database.models import (
+    ActivationTokenModel,
+    PasswordResetTokenModel,
+    RefreshTokenModel,
+)
 
 settings = get_settings()
 
