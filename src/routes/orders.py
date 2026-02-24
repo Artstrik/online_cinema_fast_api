@@ -11,7 +11,7 @@ from src.schemas.orders import (
     OrderCreateResponseSchema,
     OrderListResponseSchema,
     OrderListItemSchema,
-    OrderCancelResponseSchema
+    OrderCancelResponseSchema,
 )
 from src.services.order_service import OrderService
 from src.security.http import get_current_active_user
@@ -25,11 +25,11 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Create order from cart",
     description="Create a new order from the user's shopping cart. Cart must not be empty. "
-                "Validates that movies are available and not already purchased."
+    "Validates that movies are available and not already purchased.",
 )
 async def create_order(
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> OrderCreateResponseSchema:
     """
     Create an order from the shopping cart.
@@ -45,7 +45,7 @@ async def create_order(
 
     return OrderCreateResponseSchema(
         message="Order created successfully",
-        order=OrderResponseSchema.model_validate(order)
+        order=OrderResponseSchema.model_validate(order),
     )
 
 
@@ -54,14 +54,15 @@ async def create_order(
     response_model=OrderListResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Get user's orders",
-    description="Get a paginated list of the user's orders with filtering options."
+    description="Get a paginated list of the user's orders with filtering options.",
 )
 async def get_orders(
-        page: int = Query(1, ge=1, description="Page number"),
-        per_page: int = Query(10, ge=1, le=50, description="Items per page"),
-        status_filter: str | None = Query(None, description="Filter by status (pending, paid, canceled)"),
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(10, ge=1, le=50, description="Items per page"),
+    status_filter: str
+    | None = Query(None, description="Filter by status (pending, paid, canceled)"),
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> OrderListResponseSchema:
     """
     Get user's orders with pagination.
@@ -77,7 +78,7 @@ async def get_orders(
         db=db,
         page=page,
         per_page=per_page,
-        status_filter=status_filter
+        status_filter=status_filter,
     )
 
     total_pages = (total_items + per_page - 1) // per_page
@@ -89,7 +90,7 @@ async def get_orders(
             created_at=order.created_at,
             status=order.status,
             total_amount=order.total_amount,
-            items_count=len(order.items) if hasattr(order, 'items') else 0
+            items_count=len(order.items) if hasattr(order, "items") else 0,
         )
         for order in orders
     ]
@@ -101,7 +102,9 @@ async def get_orders(
         total_pages=total_pages,
         total_items=total_items,
         prev_page=f"/orders/?page={page - 1}&per_page={per_page}" if page > 1 else None,
-        next_page=f"/orders/?page={page + 1}&per_page={per_page}" if page < total_pages else None
+        next_page=f"/orders/?page={page + 1}&per_page={per_page}"
+        if page < total_pages
+        else None,
     )
 
 
@@ -110,12 +113,12 @@ async def get_orders(
     response_model=OrderResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Get order details",
-    description="Get detailed information about a specific order including all items."
+    description="Get detailed information about a specific order including all items.",
 )
 async def get_order(
-        order_id: int,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    order_id: int,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> OrderResponseSchema:
     """
     Get order details by ID.
@@ -135,12 +138,12 @@ async def get_order(
     response_model=OrderCancelResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Cancel order",
-    description="Cancel a pending order. Orders can only be canceled if they are in PENDING status."
+    description="Cancel a pending order. Orders can only be canceled if they are in PENDING status.",
 )
 async def cancel_order(
-        order_id: int,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    order_id: int,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> OrderCancelResponseSchema:
     """
     Cancel an order.
@@ -153,7 +156,5 @@ async def cancel_order(
     order = await OrderService.cancel_order(order_id, current_user.id, db)
 
     return OrderCancelResponseSchema(
-        message="Order canceled successfully",
-        order_id=order.id,
-        status=order.status
+        message="Order canceled successfully", order_id=order.id, status=order.status
     )

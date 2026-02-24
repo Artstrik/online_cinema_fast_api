@@ -14,11 +14,7 @@ from src.database.models.payments import (
     PaymentItemModel,
     PaymentStatusEnum,
 )
-from src.database.models.orders import (
-    OrderModel,
-    OrderItemModel,
-    OrderStatusEnum
-)
+from src.database.models.orders import OrderModel, OrderItemModel, OrderStatusEnum
 
 from src.integrations.stripe_client import get_stripe_client
 from src.services.order_service import OrderService
@@ -29,9 +25,7 @@ class PaymentService:
 
     @staticmethod
     async def create_payment_intent(
-            order_id: int,
-            user_id: int,
-            db: AsyncSession
+        order_id: int, user_id: int, db: AsyncSession
     ) -> Dict[str, Any]:
         """
         Create a Stripe payment intent for an order.
@@ -53,20 +47,21 @@ class PaymentService:
         # Validate order status
         if order.status == OrderStatusEnum.PAID:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Order is already paid"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Order is already paid"
             )
 
         if order.status == OrderStatusEnum.CANCELED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot pay for a canceled order"
+                detail="Cannot pay for a canceled order",
             )
 
         # Check if payment already exists for this order
         stmt = select(PaymentModel).where(
             PaymentModel.order_id == order_id,
-            PaymentModel.status.in_([PaymentStatusEnum.PENDING, PaymentStatusEnum.SUCCESSFUL])
+            PaymentModel.status.in_(
+                [PaymentStatusEnum.PENDING, PaymentStatusEnum.SUCCESSFUL]
+            ),
         )
         result = await db.execute(stmt)
         existing_payment = result.scalars().first()
@@ -74,7 +69,7 @@ class PaymentService:
         if existing_payment:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Payment already exists for this order (Payment ID: {existing_payment.id})"
+                detail=f"Payment already exists for this order (Payment ID: {existing_payment.id})",
             )
 
         # Revalidate total amount (in case prices changed)
@@ -97,12 +92,12 @@ class PaymentService:
                 metadata={
                     "order_id": order_id,
                     "user_id": user_id,
-                }
+                },
             )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create payment intent: {str(e)}"
+                detail=f"Failed to create payment intent: {str(e)}",
             )
 
         # Create payment record
@@ -111,7 +106,7 @@ class PaymentService:
             order_id=order_id,
             status=PaymentStatusEnum.PENDING,
             amount=order.total_amount,
-            external_payment_id=payment_intent.id
+            external_payment_id=payment_intent.id,
         )
         db.add(payment)
         await db.flush()
@@ -121,7 +116,7 @@ class PaymentService:
             payment_item = PaymentItemModel(
                 payment_id=payment.id,
                 order_item_id=order_item.id,
-                price_at_payment=order_item.price_at_order
+                price_at_payment=order_item.price_at_order,
             )
             db.add(payment_item)
 
@@ -133,14 +128,12 @@ class PaymentService:
             "client_secret": payment_intent.client_secret,
             "amount": float(order.total_amount),
             "currency": "usd",
-            "order_id": order_id
+            "order_id": order_id,
         }
 
     @staticmethod
     async def process_webhook_event(
-            event_type: str,
-            event_data: Dict[str, Any],
-            db: AsyncSession
+        event_type: str, event_data: Dict[str, Any], db: AsyncSession
     ) -> None:
         """
         Process Stripe webhook event.
@@ -159,11 +152,10 @@ class PaymentService:
 
     @staticmethod
     async def _handle_payment_success(
-            event_data: Dict[str, Any],
-            db: AsyncSession
+        event_data: Dict[str, Any], db: AsyncSession
     ) -> None:
         """Handle successful payment webhook."""
-        payment_intent_id = event_data['object']['id']
+        payment_intent_id = event_data["object"]["id"]
 
         # Find payment
         stmt = select(PaymentModel).where(
@@ -180,20 +172,17 @@ class PaymentService:
 
         # Update order status
         await OrderService.update_order_status(
-            payment.order_id,
-            OrderStatusEnum.PAID,
-            db
+            payment.order_id, OrderStatusEnum.PAID, db
         )
 
         await db.commit()
 
     @staticmethod
     async def _handle_payment_failure(
-            event_data: Dict[str, Any],
-            db: AsyncSession
+        event_data: Dict[str, Any], db: AsyncSession
     ) -> None:
         """Handle failed payment webhook."""
-        payment_intent_id = event_data['object']['id']
+        payment_intent_id = event_data["object"]["id"]
 
         # Find payment
         stmt = select(PaymentModel).where(
@@ -209,12 +198,8 @@ class PaymentService:
         await db.commit()
 
     @staticmethod
-    async def _handle_refund(
-            event_data: Dict[str, Any],
-            db: AsyncSession
-    ) -> None:
+    async def _handle_refund(event_data: Dict[str, Any], db: AsyncSession) -> None:
         """Handle refund webhook."""
-        charge_id = event_data['object']['id']
 
         # Find payment by charge ID (might need to adjust based on Stripe data)
         # This is simplified - in production, you'd need proper charge tracking
@@ -230,10 +215,7 @@ class PaymentService:
 
     @staticmethod
     async def get_payment_history(
-            user_id: int,
-            db: AsyncSession,
-            page: int = 1,
-            per_page: int = 10
+        user_id: int, db: AsyncSession, page: int = 1, per_page: int = 10
     ) -> tuple[List[PaymentModel], int]:
         """
         Get user's payment history.
@@ -250,7 +232,9 @@ class PaymentService:
         offset = (page - 1) * per_page
 
         # Get total count
-        stmt = select(func.count(PaymentModel.id)).where(PaymentModel.user_id == user_id)
+        stmt = select(func.count(PaymentModel.id)).where(
+            PaymentModel.user_id == user_id
+        )
         result = await db.execute(stmt)
         total_count = result.scalar() or 0
 
@@ -272,9 +256,7 @@ class PaymentService:
 
     @staticmethod
     async def get_payment_by_id(
-            payment_id: int,
-            user_id: int,
-            db: AsyncSession
+        payment_id: int, user_id: int, db: AsyncSession
     ) -> PaymentModel:
         """
         Get payment by ID with validation.
@@ -305,24 +287,24 @@ class PaymentService:
         if not payment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Payment {payment_id} not found"
+                detail=f"Payment {payment_id} not found",
             )
 
         if payment.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this payment"
+                detail="You don't have permission to view this payment",
             )
 
         return payment
 
     @staticmethod
     async def refund_payment(
-            payment_id: int,
-            user_id: int,
-            amount: Optional[Decimal],
-            reason: Optional[str],
-            db: AsyncSession
+        payment_id: int,
+        user_id: int,
+        amount: Optional[Decimal],
+        reason: Optional[str],
+        db: AsyncSession,
     ) -> PaymentModel:
         """
         Refund a payment.
@@ -345,7 +327,7 @@ class PaymentService:
         if payment.status != PaymentStatusEnum.SUCCESSFUL:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only successful payments can be refunded"
+                detail="Only successful payments can be refunded",
             )
 
         # Process refund through Stripe
@@ -355,12 +337,12 @@ class PaymentService:
             await stripe_client.create_refund(
                 payment_intent_id=payment.external_payment_id,
                 amount=amount,
-                reason=reason
+                reason=reason,
             )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to process refund: {str(e)}"
+                detail=f"Failed to process refund: {str(e)}",
             )
 
         payment.status = PaymentStatusEnum.REFUNDED

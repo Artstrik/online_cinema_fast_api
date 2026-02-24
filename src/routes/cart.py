@@ -10,7 +10,7 @@ from src.schemas.cart import (
     CartItemCreateSchema,
     CartResponseSchema,
     CartClearResponseSchema,
-    CartItemDeleteResponseSchema
+    CartItemDeleteResponseSchema,
 )
 from src.services.cart_service import CartService
 from src.security.http import get_current_active_user
@@ -24,12 +24,12 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     summary="Add movie to cart",
     description="Add a movie to the user's shopping cart. Validates that the movie exists "
-                "and hasn't been purchased already."
+    "and hasn't been purchased already.",
 )
 async def add_movie_to_cart(
-        item: CartItemCreateSchema,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    item: CartItemCreateSchema,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> CartResponseSchema:
     """
     Add a movie to the shopping cart.
@@ -54,12 +54,12 @@ async def add_movie_to_cart(
     response_model=CartItemDeleteResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Remove movie from cart",
-    description="Remove a specific movie from the user's shopping cart."
+    description="Remove a specific movie from the user's shopping cart.",
 )
 async def remove_movie_from_cart(
-        movie_id: int,
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    movie_id: int,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> CartItemDeleteResponseSchema:
     """
     Remove a movie from the shopping cart.
@@ -69,8 +69,7 @@ async def remove_movie_from_cart(
     await CartService.remove_movie_from_cart(current_user.id, movie_id, db)
 
     return CartItemDeleteResponseSchema(
-        message="Item removed from cart",
-        movie_id=movie_id
+        message="Item removed from cart", movie_id=movie_id
     )
 
 
@@ -79,11 +78,11 @@ async def remove_movie_from_cart(
     response_model=CartResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Get shopping cart",
-    description="Get the user's shopping cart with all items and total price."
+    description="Get the user's shopping cart with all items and total price.",
 )
 async def get_cart(
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> CartResponseSchema:
     """
     Get the user's shopping cart.
@@ -102,11 +101,11 @@ async def get_cart(
     response_model=CartClearResponseSchema,
     status_code=status.HTTP_200_OK,
     summary="Clear shopping cart",
-    description="Remove all items from the user's shopping cart."
+    description="Remove all items from the user's shopping cart.",
 )
 async def clear_cart(
-        current_user: UserModel = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db)
+    current_user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ) -> CartClearResponseSchema:
     """
     Clear all items from the shopping cart.
@@ -116,6 +115,5 @@ async def clear_cart(
     items_removed = await CartService.clear_cart(current_user.id, db)
 
     return CartClearResponseSchema(
-        message="Cart cleared successfully",
-        items_removed=items_removed
+        message="Cart cleared successfully", items_removed=items_removed
     )

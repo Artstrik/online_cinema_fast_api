@@ -1,7 +1,7 @@
 from src.exceptions.security import (
     BaseSecurityError,
     InvalidTokenError,
-    TokenExpiredError
+    TokenExpiredError,
 )
 from src.exceptions.email import BaseEmailError
 from src.exceptions.storage import (

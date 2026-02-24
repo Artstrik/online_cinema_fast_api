@@ -23,10 +23,7 @@ class OrderService:
     """Service for managing order operations."""
 
     @staticmethod
-    async def create_order_from_cart(
-            user_id: int,
-            db: AsyncSession
-    ) -> OrderModel:
+    async def create_order_from_cart(user_id: int, db: AsyncSession) -> OrderModel:
         """
         Create an order from user's cart.
 
@@ -49,9 +46,7 @@ class OrderService:
         # Get cart with items
         stmt = (
             select(CartModel)
-            .options(
-                joinedload(CartModel.items).joinedload(CartItemModel.movie)
-            )
+            .options(joinedload(CartModel.items).joinedload(CartItemModel.movie))
             .where(CartModel.user_id == user_id)
         )
         result = await db.execute(stmt)
@@ -60,7 +55,7 @@ class OrderService:
         if not cart or not cart.items:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cart is empty. Add movies before creating an order."
+                detail="Cart is empty. Add movies before creating an order.",
             )
 
         # Validate all movies are available
@@ -72,7 +67,7 @@ class OrderService:
         if unavailable_movies:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Some movies are no longer available: {unavailable_movies}"
+                detail=f"Some movies are no longer available: {unavailable_movies}",
             )
 
         # Check for already purchased movies
@@ -83,7 +78,7 @@ class OrderService:
             .where(
                 OrderItemModel.movie_id.in_(movie_ids),
                 OrderItemModel.order.has(user_id=user_id),
-                OrderItemModel.order.has(status=OrderStatusEnum.PAID)
+                OrderItemModel.order.has(status=OrderStatusEnum.PAID),
             )
         )
         result = await db.execute(stmt)
@@ -98,19 +93,15 @@ class OrderService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"You have already purchased: {', '.join(movie_names)}. "
-                       f"Please remove them from cart."
+                f"Please remove them from cart.",
             )
 
         # Calculate total amount
-        total_amount = sum(
-            Decimal(str(item.movie.price)) for item in cart.items
-        )
+        total_amount = sum(Decimal(str(item.movie.price)) for item in cart.items)
 
         # Create order
         order = OrderModel(
-            user_id=user_id,
-            status=OrderStatusEnum.PENDING,
-            total_amount=total_amount
+            user_id=user_id, status=OrderStatusEnum.PENDING, total_amount=total_amount
         )
         db.add(order)
         await db.flush()
@@ -120,7 +111,7 @@ class OrderService:
             order_item = OrderItemModel(
                 order_id=order.id,
                 movie_id=cart_item.movie_id,
-                price_at_order=cart_item.movie.price
+                price_at_order=cart_item.movie.price,
             )
             db.add(order_item)
 
@@ -134,9 +125,7 @@ class OrderService:
         # Load relationships
         stmt = (
             select(OrderModel)
-            .options(
-                joinedload(OrderModel.items).joinedload(OrderItemModel.movie)
-            )
+            .options(joinedload(OrderModel.items).joinedload(OrderItemModel.movie))
             .where(OrderModel.id == order.id)
         )
         result = await db.execute(stmt)
@@ -146,9 +135,7 @@ class OrderService:
 
     @staticmethod
     async def get_order_by_id(
-            order_id: int,
-            user_id: int,
-            db: AsyncSession
+        order_id: int, user_id: int, db: AsyncSession
     ) -> OrderModel:
         """
         Get order by ID with validation.
@@ -166,9 +153,7 @@ class OrderService:
         """
         stmt = (
             select(OrderModel)
-            .options(
-                joinedload(OrderModel.items).joinedload(OrderItemModel.movie)
-            )
+            .options(joinedload(OrderModel.items).joinedload(OrderItemModel.movie))
             .where(OrderModel.id == order_id)
         )
         result = await db.execute(stmt)
@@ -177,23 +162,20 @@ class OrderService:
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Order {order_id} not found"
+                detail=f"Order {order_id} not found",
             )
 
         if order.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to view this order"
+                detail="You don't have permission to view this order",
             )
 
         return order
 
     @staticmethod
     async def get_user_orders(
-            user_id: int,
-            db: AsyncSession,
-            page: int = 1,
-            per_page: int = 10
+        user_id: int, db: AsyncSession, page: int = 1, per_page: int = 10
     ) -> tuple[List[OrderModel], int]:
         """
         Get user's orders with pagination.
@@ -217,9 +199,7 @@ class OrderService:
         # Get orders
         stmt = (
             select(OrderModel)
-            .options(
-                joinedload(OrderModel.items).joinedload(OrderItemModel.movie)
-            )
+            .options(joinedload(OrderModel.items).joinedload(OrderItemModel.movie))
             .where(OrderModel.user_id == user_id)
             .order_by(OrderModel.created_at.desc())
             .offset(offset)
@@ -232,10 +212,7 @@ class OrderService:
 
     @staticmethod
     async def cancel_order(
-            order_id: int,
-            user_id: int,
-            db: AsyncSession,
-            reason: Optional[str] = None
+        order_id: int, user_id: int, db: AsyncSession, reason: Optional[str] = None
     ) -> OrderModel:
         """
         Cancel an order (only if not paid).
@@ -257,13 +234,13 @@ class OrderService:
         if order.status == OrderStatusEnum.PAID:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot cancel a paid order. Please request a refund instead."
+                detail="Cannot cancel a paid order. Please request a refund instead.",
             )
 
         if order.status == OrderStatusEnum.CANCELED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Order is already canceled"
+                detail="Order is already canceled",
             )
 
         order.status = OrderStatusEnum.CANCELED
@@ -274,9 +251,7 @@ class OrderService:
 
     @staticmethod
     async def update_order_status(
-            order_id: int,
-            new_status: OrderStatusEnum,
-            db: AsyncSession
+        order_id: int, new_status: OrderStatusEnum, db: AsyncSession
     ) -> OrderModel:
         """
         Update order status (internal method for payment processing).
@@ -296,7 +271,7 @@ class OrderService:
         if not order:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Order {order_id} not found"
+                detail=f"Order {order_id} not found",
             )
 
         order.status = new_status

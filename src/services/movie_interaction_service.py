@@ -8,8 +8,12 @@ from sqlalchemy.orm import joinedload
 from fastapi import HTTPException, status
 
 from src.database.models import (
-    MovieModel, MovieLikeModel, MovieCommentModel,
-    MovieFavoriteModel, MovieRatingModel, UserModel
+    MovieModel,
+    MovieLikeModel,
+    MovieCommentModel,
+    MovieFavoriteModel,
+    MovieRatingModel,
+    UserModel,
 )
 
 
@@ -20,10 +24,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def toggle_like(
-            movie_id: int,
-            user_id: int,
-            is_like: bool,
-            db: AsyncSession
+        movie_id: int, user_id: int, is_like: bool, db: AsyncSession
     ) -> MovieLikeModel:
         """
         Toggle like/dislike on a movie.
@@ -45,13 +46,12 @@ class MovieInteractionService:
         if not movie:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Movie {movie_id} not found"
+                detail=f"Movie {movie_id} not found",
             )
 
         # Check if like already exists
         stmt = select(MovieLikeModel).where(
-            MovieLikeModel.movie_id == movie_id,
-            MovieLikeModel.user_id == user_id
+            MovieLikeModel.movie_id == movie_id, MovieLikeModel.user_id == user_id
         )
         result = await db.execute(stmt)
         existing_like = result.scalars().first()
@@ -65,9 +65,7 @@ class MovieInteractionService:
         else:
             # Create new like
             new_like = MovieLikeModel(
-                movie_id=movie_id,
-                user_id=user_id,
-                is_like=is_like
+                movie_id=movie_id, user_id=user_id, is_like=is_like
             )
             db.add(new_like)
             await db.commit()
@@ -75,23 +73,17 @@ class MovieInteractionService:
             return new_like
 
     @staticmethod
-    async def remove_like(
-            movie_id: int,
-            user_id: int,
-            db: AsyncSession
-    ) -> None:
+    async def remove_like(movie_id: int, user_id: int, db: AsyncSession) -> None:
         """Remove like/dislike from a movie."""
         stmt = select(MovieLikeModel).where(
-            MovieLikeModel.movie_id == movie_id,
-            MovieLikeModel.user_id == user_id
+            MovieLikeModel.movie_id == movie_id, MovieLikeModel.user_id == user_id
         )
         result = await db.execute(stmt)
         like = result.scalars().first()
 
         if not like:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Like not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Like not found"
             )
 
         await db.delete(like)
@@ -99,15 +91,13 @@ class MovieInteractionService:
 
     @staticmethod
     async def get_like_stats(
-            movie_id: int,
-            user_id: Optional[int],
-            db: AsyncSession
+        movie_id: int, user_id: Optional[int], db: AsyncSession
     ) -> dict:
         """Get like statistics for a movie."""
         # Count likes
         stmt = select(func.count(MovieLikeModel.id)).where(
             MovieLikeModel.movie_id == movie_id,
-            MovieLikeModel.is_like == True
+            MovieLikeModel.is_like.is_(True)  # Исправлено: is_like == True → is_like.is_(True)
         )
         result = await db.execute(stmt)
         likes_count = result.scalar() or 0
@@ -115,7 +105,7 @@ class MovieInteractionService:
         # Count dislikes
         stmt = select(func.count(MovieLikeModel.id)).where(
             MovieLikeModel.movie_id == movie_id,
-            MovieLikeModel.is_like == False
+            MovieLikeModel.is_like.is_(False)  # Исправлено: is_like == False → is_like.is_(False)
         )
         result = await db.execute(stmt)
         dislikes_count = result.scalar() or 0
@@ -124,8 +114,7 @@ class MovieInteractionService:
         user_like = None
         if user_id:
             stmt = select(MovieLikeModel).where(
-                MovieLikeModel.movie_id == movie_id,
-                MovieLikeModel.user_id == user_id
+                MovieLikeModel.movie_id == movie_id, MovieLikeModel.user_id == user_id
             )
             result = await db.execute(stmt)
             like = result.scalars().first()
@@ -136,18 +125,18 @@ class MovieInteractionService:
             "movie_id": movie_id,
             "likes_count": likes_count,
             "dislikes_count": dislikes_count,
-            "user_like": user_like
+            "user_like": user_like,
         }
 
     # ===== COMMENTS =====
 
     @staticmethod
     async def create_comment(
-            movie_id: int,
-            user_id: int,
-            content: str,
-            parent_id: Optional[int],
-            db: AsyncSession
+        movie_id: int,
+        user_id: int,
+        content: str,
+        parent_id: Optional[int],
+        db: AsyncSession,
     ) -> MovieCommentModel:
         """Create a comment on a movie."""
         # Check movie exists
@@ -156,24 +145,21 @@ class MovieInteractionService:
         if not result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Movie {movie_id} not found"
+                detail=f"Movie {movie_id} not found",
             )
 
         # Check parent comment exists if provided
-        if parent_id:
+        if parent_id is not None:  # Исправлено: if parent_id → if parent_id is not None
             stmt = select(MovieCommentModel).where(MovieCommentModel.id == parent_id)
             result = await db.execute(stmt)
             if not result.scalars().first():
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Parent comment {parent_id} not found"
+                    detail=f"Parent comment {parent_id} not found",
                 )
 
         comment = MovieCommentModel(
-            movie_id=movie_id,
-            user_id=user_id,
-            content=content,
-            parent_id=parent_id
+            movie_id=movie_id, user_id=user_id, content=content, parent_id=parent_id
         )
         db.add(comment)
         await db.commit()
@@ -190,10 +176,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def get_movie_comments(
-            movie_id: int,
-            db: AsyncSession,
-            page: int = 1,
-            per_page: int = 20
+        movie_id: int, db: AsyncSession, page: int = 1, per_page: int = 20
     ) -> Tuple[List[MovieCommentModel], int]:
         """Get comments for a movie with pagination."""
         offset = (page - 1) * per_page
@@ -201,7 +184,7 @@ class MovieInteractionService:
         # Count total comments (only root comments)
         stmt = select(func.count(MovieCommentModel.id)).where(
             MovieCommentModel.movie_id == movie_id,
-            MovieCommentModel.parent_id == None
+            MovieCommentModel.parent_id.is_(None)  # Исправлено: parent_id == None → parent_id.is_(None)
         )
         result = await db.execute(stmt)
         total = result.scalar() or 0
@@ -211,11 +194,11 @@ class MovieInteractionService:
             select(MovieCommentModel)
             .options(
                 joinedload(MovieCommentModel.user),
-                joinedload(MovieCommentModel.replies)
+                joinedload(MovieCommentModel.replies),
             )
             .where(
                 MovieCommentModel.movie_id == movie_id,
-                MovieCommentModel.parent_id == None
+                MovieCommentModel.parent_id.is_(None),  # Исправлено: parent_id == None → parent_id.is_(None)
             )
             .order_by(MovieCommentModel.created_at.desc())
             .offset(offset)
@@ -228,10 +211,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def update_comment(
-            comment_id: int,
-            user_id: int,
-            content: str,
-            db: AsyncSession
+        comment_id: int, user_id: int, content: str, db: AsyncSession
     ) -> MovieCommentModel:
         """Update a comment."""
         stmt = select(MovieCommentModel).where(MovieCommentModel.id == comment_id)
@@ -240,14 +220,13 @@ class MovieInteractionService:
 
         if not comment:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Comment not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
             )
 
         if comment.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only edit your own comments"
+                detail="You can only edit your own comments",
             )
 
         comment.content = content
@@ -256,11 +235,7 @@ class MovieInteractionService:
         return comment
 
     @staticmethod
-    async def delete_comment(
-            comment_id: int,
-            user_id: int,
-            db: AsyncSession
-    ) -> None:
+    async def delete_comment(comment_id: int, user_id: int, db: AsyncSession) -> None:
         """Delete a comment."""
         stmt = select(MovieCommentModel).where(MovieCommentModel.id == comment_id)
         result = await db.execute(stmt)
@@ -268,14 +243,13 @@ class MovieInteractionService:
 
         if not comment:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Comment not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found"
             )
 
         if comment.user_id != user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only delete your own comments"
+                detail="You can only delete your own comments",
             )
 
         await db.delete(comment)
@@ -285,9 +259,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def add_to_favorites(
-            movie_id: int,
-            user_id: int,
-            db: AsyncSession
+        movie_id: int, user_id: int, db: AsyncSession
     ) -> MovieFavoriteModel:
         """Add movie to favorites."""
         # Check movie exists
@@ -296,25 +268,22 @@ class MovieInteractionService:
         if not result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Movie {movie_id} not found"
+                detail=f"Movie {movie_id} not found",
             )
 
         # Check if already in favorites
         stmt = select(MovieFavoriteModel).where(
             MovieFavoriteModel.movie_id == movie_id,
-            MovieFavoriteModel.user_id == user_id
+            MovieFavoriteModel.user_id == user_id,
         )
         result = await db.execute(stmt)
         if result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Movie already in favorites"
+                detail="Movie already in favorites",
             )
 
-        favorite = MovieFavoriteModel(
-            movie_id=movie_id,
-            user_id=user_id
-        )
+        favorite = MovieFavoriteModel(movie_id=movie_id, user_id=user_id)
         db.add(favorite)
         await db.commit()
         await db.refresh(favorite)
@@ -322,22 +291,19 @@ class MovieInteractionService:
 
     @staticmethod
     async def remove_from_favorites(
-            movie_id: int,
-            user_id: int,
-            db: AsyncSession
+        movie_id: int, user_id: int, db: AsyncSession
     ) -> None:
         """Remove movie from favorites."""
         stmt = select(MovieFavoriteModel).where(
             MovieFavoriteModel.movie_id == movie_id,
-            MovieFavoriteModel.user_id == user_id
+            MovieFavoriteModel.user_id == user_id,
         )
         result = await db.execute(stmt)
         favorite = result.scalars().first()
 
         if not favorite:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Movie not in favorites"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Movie not in favorites"
             )
 
         await db.delete(favorite)
@@ -345,10 +311,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def get_user_favorites(
-            user_id: int,
-            db: AsyncSession,
-            page: int = 1,
-            per_page: int = 20
+        user_id: int, db: AsyncSession, page: int = 1, per_page: int = 20
     ) -> Tuple[List[MovieFavoriteModel], int]:
         """Get user's favorite movies."""
         offset = (page - 1) * per_page
@@ -378,10 +341,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def rate_movie(
-            movie_id: int,
-            user_id: int,
-            rating: int,
-            db: AsyncSession
+        movie_id: int, user_id: int, rating: int, db: AsyncSession
     ) -> MovieRatingModel:
         """Rate a movie (1-10 scale)."""
         # Check movie exists
@@ -390,13 +350,12 @@ class MovieInteractionService:
         if not result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Movie {movie_id} not found"
+                detail=f"Movie {movie_id} not found",
             )
 
         # Check if rating already exists
         stmt = select(MovieRatingModel).where(
-            MovieRatingModel.movie_id == movie_id,
-            MovieRatingModel.user_id == user_id
+            MovieRatingModel.movie_id == movie_id, MovieRatingModel.user_id == user_id
         )
         result = await db.execute(stmt)
         existing_rating = result.scalars().first()
@@ -410,9 +369,7 @@ class MovieInteractionService:
         else:
             # Create new rating
             new_rating = MovieRatingModel(
-                movie_id=movie_id,
-                user_id=user_id,
-                rating=rating
+                movie_id=movie_id, user_id=user_id, rating=rating
             )
             db.add(new_rating)
             await db.commit()
@@ -421,9 +378,7 @@ class MovieInteractionService:
 
     @staticmethod
     async def get_rating_stats(
-            movie_id: int,
-            user_id: Optional[int],
-            db: AsyncSession
+        movie_id: int, user_id: Optional[int], db: AsyncSession
     ) -> dict:
         """Get rating statistics for a movie."""
         # Calculate average rating
@@ -442,19 +397,19 @@ class MovieInteractionService:
 
         # Get user's rating if provided
         user_rating = None
-        if user_id:
+        if user_id is not None:  # Исправлено: if user_id → if user_id is not None
             stmt = select(MovieRatingModel).where(
                 MovieRatingModel.movie_id == movie_id,
-                MovieRatingModel.user_id == user_id
+                MovieRatingModel.user_id == user_id,
             )
             result = await db.execute(stmt)
             rating = result.scalars().first()
-            if rating:
+            if rating is not None:  # Исправлено: if rating → if rating is not None
                 user_rating = rating.rating
 
         return {
             "movie_id": movie_id,
-            "average_rating": float(avg_rating) if avg_rating else None,
+            "average_rating": float(avg_rating) if avg_rating is not None else None,
             "total_ratings": total_ratings,
-            "user_rating": user_rating
+            "user_rating": user_rating,
         }

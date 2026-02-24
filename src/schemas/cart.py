@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class MovieInCartSchema(BaseModel):
     """Schema for movie information in cart."""
+
     id: int
     uuid: str
     name: str
@@ -24,6 +25,7 @@ class MovieInCartSchema(BaseModel):
 
 class CartItemSchema(BaseModel):
     """Schema for a single cart item."""
+
     id: int
     movie_id: int
     added_at: datetime
@@ -34,11 +36,13 @@ class CartItemSchema(BaseModel):
 
 class CartItemCreateSchema(BaseModel):
     """Schema for adding a movie to cart."""
+
     movie_id: int = Field(..., gt=0, description="ID of the movie to add to cart")
 
 
 class CartResponseSchema(BaseModel):
     """Schema for cart response."""
+
     id: int
     user_id: int
     items: List[CartItemSchema]
@@ -55,17 +59,19 @@ class CartResponseSchema(BaseModel):
             user_id=cart.user_id,
             items=cart.items,
             total_items=items_count,
-            total_price=total_price
+            total_price=total_price,
         )
 
 
 class CartClearResponseSchema(BaseModel):
     """Schema for cart clear response."""
+
     message: str = "Cart cleared successfully"
     items_removed: int
 
 
 class CartItemDeleteResponseSchema(BaseModel):
     """Schema for cart item deletion response."""
+
     message: str = "Item removed from cart"
     movie_id: int

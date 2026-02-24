@@ -15,20 +15,28 @@ from src.routes import (
 
 from src.security.http import get_current_active_user
 
-app = FastAPI(
-    title="Online Cinema Fast API",
-    description="Online cinema Platform"
-)
+app = FastAPI(title="Online Cinema Fast API", description="Online cinema Platform")
 
 api_version_prefix = "/api/v1"
 
-app.include_router(accounts_router, prefix=f"{api_version_prefix}/accounts", tags=["accounts"])
-app.include_router(profiles_router, prefix=f"{api_version_prefix}/profiles", tags=["profiles"])
+app.include_router(
+    accounts_router, prefix=f"{api_version_prefix}/accounts", tags=["accounts"]
+)
+app.include_router(
+    profiles_router, prefix=f"{api_version_prefix}/profiles", tags=["profiles"]
+)
 app.include_router(movie_router, prefix=api_version_prefix, tags=["movies"])
 app.include_router(cart_router, prefix=f"{api_version_prefix}/cart", tags=["cart"])
-app.include_router(orders_router, prefix=f"{api_version_prefix}/orders", tags=["orders"])
-app.include_router(payments_router, prefix=f"{api_version_prefix}/payments", tags=["payments"])
-app.include_router(movie_interaction_router, prefix=api_version_prefix, tags=["movie-interactions"])
+app.include_router(
+    orders_router, prefix=f"{api_version_prefix}/orders", tags=["orders"]
+)
+app.include_router(
+    payments_router, prefix=f"{api_version_prefix}/payments", tags=["payments"]
+)
+app.include_router(
+    movie_interaction_router, prefix=api_version_prefix, tags=["movie-interactions"]
+)
+
 
 @app.get(f"{api_version_prefix}/openapi.json", include_in_schema=False)
 async def protected_openapi(_: UserModel = Depends(get_current_active_user)):

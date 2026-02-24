@@ -38,9 +38,11 @@ def validate_password_complexity(password: str) -> str:
     if not re.search(r"\d", password):
         raise ValueError("Password must contain at least one digit")
 
-    # Special characters
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\\/~`';]", password):
-        raise ValueError("Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>_-+=[]\\\/~`';)")
+    # Special characters - исправленная версия
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\/~`';]", password):
+        raise ValueError(
+            "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>_-+=[]\\/~`';)"
+        )
 
     return password
 
@@ -88,15 +90,21 @@ def check_password_strength(password: str) -> dict:
     else:
         feedback.append("Add numbers")
 
-    if re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\\/~`';]", password):
+    # Special characters - исправленная версия
+    if re.search(r"[!@#$%^&*(),.?\":{}|<>_\-+=\[\]\\/~`';]", password):
         score += 1
     else:
         feedback.append("Add special characters")
 
     # Check for common patterns
     common_patterns = [
-        r"12345", r"password", r"qwerty", r"abc123",
-        r"111111", r"123123", r"admin"
+        r"12345",
+        r"password",
+        r"qwerty",
+        r"abc123",
+        r"111111",
+        r"123123",
+        r"admin",
     ]
 
     for pattern in common_patterns:
@@ -108,7 +116,7 @@ def check_password_strength(password: str) -> dict:
     is_strong = score >= 5 and len(feedback) == 0
 
     return {
-        'is_strong': is_strong,
-        'score': max(0, score),
-        'feedback': feedback if feedback else ["Password is strong"]
+        "is_strong": is_strong,
+        "score": max(0, score),
+        "feedback": feedback if feedback else ["Password is strong"],
     }

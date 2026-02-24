@@ -25,10 +25,10 @@ class StripeClient:
         stripe.api_key = self.api_key
 
     async def create_payment_intent(
-            self,
-            amount: Decimal,
-            currency: str = "usd",
-            metadata: Optional[Dict[str, Any]] = None
+        self,
+        amount: Decimal,
+        currency: str = "usd",
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> stripe.PaymentIntent:
         """
         Create a Stripe PaymentIntent.
@@ -49,15 +49,14 @@ class StripeClient:
             currency=currency,
             metadata=metadata or {},
             automatic_payment_methods={
-                'enabled': True,
+                "enabled": True,
             },
         )
 
         return payment_intent
 
     async def retrieve_payment_intent(
-            self,
-            payment_intent_id: str
+        self, payment_intent_id: str
     ) -> stripe.PaymentIntent:
         """
         Retrieve a PaymentIntent by ID.
@@ -71,8 +70,7 @@ class StripeClient:
         return stripe.PaymentIntent.retrieve(payment_intent_id)
 
     async def confirm_payment_intent(
-            self,
-            payment_intent_id: str
+        self, payment_intent_id: str
     ) -> stripe.PaymentIntent:
         """
         Confirm a PaymentIntent.
@@ -86,8 +84,7 @@ class StripeClient:
         return stripe.PaymentIntent.confirm(payment_intent_id)
 
     async def cancel_payment_intent(
-            self,
-            payment_intent_id: str
+        self, payment_intent_id: str
     ) -> stripe.PaymentIntent:
         """
         Cancel a PaymentIntent.
@@ -101,10 +98,10 @@ class StripeClient:
         return stripe.PaymentIntent.cancel(payment_intent_id)
 
     async def create_refund(
-            self,
-            payment_intent_id: str,
-            amount: Optional[Decimal] = None,
-            reason: Optional[str] = None
+        self,
+        payment_intent_id: str,
+        amount: Optional[Decimal] = None,
+        reason: Optional[str] = None,
     ) -> stripe.Refund:
         """
         Create a refund for a payment.
@@ -118,22 +115,19 @@ class StripeClient:
             Stripe Refund object
         """
         refund_params = {
-            'payment_intent': payment_intent_id,
+            "payment_intent": payment_intent_id,
         }
 
         if amount is not None:
-            refund_params['amount'] = int(amount * 100)
+            refund_params["amount"] = int(amount * 100)
 
         if reason:
-            refund_params['reason'] = reason
+            refund_params["reason"] = reason
 
         return stripe.Refund.create(**refund_params)
 
     def validate_webhook_signature(
-            self,
-            payload: str,
-            sig_header: str,
-            webhook_secret: Optional[str] = None
+        self, payload: str, sig_header: str, webhook_secret: Optional[str] = None
     ) -> stripe.Event:
         """
         Validate Stripe webhook signature and construct event.
@@ -153,9 +147,7 @@ class StripeClient:
         secret = webhook_secret or settings.STRIPE_WEBHOOK_SECRET
 
         try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, secret
-            )
+            event = stripe.Webhook.construct_event(payload, sig_header, secret)
             return event
         except ValueError:
             # Invalid payload
@@ -164,10 +156,7 @@ class StripeClient:
             # Invalid signature
             raise
 
-    async def get_payment_method(
-            self,
-            payment_method_id: str
-    ) -> stripe.PaymentMethod:
+    async def get_payment_method(self, payment_method_id: str) -> stripe.PaymentMethod:
         """
         Retrieve a PaymentMethod by ID.
 
