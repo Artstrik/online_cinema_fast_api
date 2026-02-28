@@ -13,6 +13,7 @@ from src.database.models.accounts import (
     RefreshTokenModel,
     UserGroupEnum,
     GenderEnum,
+    RevokedAccessTokenModel
 )
 
 from src.database.models.movies import (
@@ -61,6 +62,7 @@ __all__ = [
     "RefreshTokenModel",
     "UserGroupEnum",
     "GenderEnum",
+    "RevokedAccessTokenModel",
     # Movie models
     "MovieModel",
     "GenreModel",

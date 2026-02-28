@@ -52,7 +52,7 @@ services:
       minio:
         condition: service_healthy
     volumes:
-      - ./src:/usr/src/fastapi
+      - ./src:/usr/src/fastapi/src
     networks:
       - theater_network
 
@@ -120,7 +120,7 @@ services:
   celery_worker:
     build: .
     container_name: celery_worker_theater
-    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "worker", "-l", "info"]
+    command: ["poetry", "run", "celery", "-A", "src.celery_app.celery_app", "worker", "-l", "info"]
     env_file:
       - .env
     depends_on:

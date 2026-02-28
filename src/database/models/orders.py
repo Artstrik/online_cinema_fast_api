@@ -3,17 +3,18 @@ Order models for the Theater application.
 """
 import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, DateTime, DECIMAL, Enum as SQLAlchemyEnum
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy.sql import func
 
 from src.database.models.base import Base
-from src.database.models.accounts import UserModel
-from src.database.models.payments import PaymentModel
-from src.database.models.movies import MovieModel
-from src.database.models.payments import PaymentItemModel
+
+if TYPE_CHECKING:
+    from src.database.models.payments import PaymentModel
+    from src.database.models.accounts import UserModel
+    from src.database.models.movies import MovieModel
 
 
 class OrderStatusEnum(str, Enum):
