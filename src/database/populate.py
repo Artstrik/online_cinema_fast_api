@@ -52,38 +52,53 @@ class CSVDatabaseSeeder:
         return first_movie is not None
 
     def _preprocess_csv(self) -> pd.DataFrame:
-        """
-        Load the CSV, remove duplicates, convert relevant columns to strings, and clean up data.
-        Saves the cleaned CSV back to the same path, then returns the Pandas DataFrame.
+        print("Preprocessing CSV file...")
 
-        :return: A Pandas DataFrame containing cleaned movie data.
-        """
         data = pd.read_csv(self._csv_file_path)
-        data = data.drop_duplicates(subset=["names", "date_x"], keep="first")
 
+        # прибираємо повні дублікати
+        data = data.drop_duplicates()
+
+        # нормалізація текстових колонок
         for col in ["crew", "genre", "country", "orig_lang", "status"]:
-            data[col] = data[col].fillna("Unknown").astype(str)
+            if col in data.columns:
+                data[col] = data[col].fillna("Unknown").astype(str).str.strip()
+            else:
+                data[col] = "Unknown"
 
+        # очистка crew
         data["crew"] = (
             data["crew"]
             .str.replace(r"\s+", "", regex=True)
             .apply(
-                lambda x: ",".join(sorted(set(x.split(",")))) if x != "Unknown" else x
+                lambda x: ",".join(sorted(set(filter(None, x.split(",")))))
+                if x != "Unknown"
+                else x
             )
         )
 
-        data["genre"] = data["genre"].str.replace("\u00A0", "", regex=True)
-        data["date_x"] = data["date_x"].astype(str).str.strip()
-        data["date_x"] = pd.to_datetime(
-            data["date_x"], format="%Y-%m-%d", errors="raise"
-        )
-        data["date_x"] = data["date_x"].dt.date
-        data["orig_lang"] = data["orig_lang"].str.replace(r"\s+", "", regex=True)
-        data["status"] = data["status"].str.strip()
+        # очистка genre
+        data["genre"] = data["genre"].str.replace("\u00A0", "", regex=True).str.strip()
 
-        print("Preprocessing CSV file...")
-        data.to_csv(self._csv_file_path, index=False)
-        print(f"CSV file saved to {self._csv_file_path}")
+        # очистка мови
+        data["orig_lang"] = data["orig_lang"].str.replace(r"\s+", "", regex=True)
+
+        # конвертація дати
+        data["date_x"] = pd.to_datetime(data["date_x"], errors="coerce")
+
+        # створюємо year для constraint (name, year, time)
+        data["year"] = data["date_x"].dt.year
+
+        # прибираємо дублікати відповідно до constraint
+        data = data.drop_duplicates(subset=["names", "year"], keep="first")
+
+        # перевірка numeric колонок
+        for col in ["score", "budget_x", "revenue", "votes"]:
+            if col not in data.columns:
+                data[col] = None
+
+        print(f"CSV rows after cleaning: {len(data)}")
+
         return data
 
     async def _seed_user_groups(self) -> None:
@@ -219,31 +234,55 @@ class CSVDatabaseSeeder:
         return country_map, genre_map, actor_map, language_map
 
     def _prepare_movies_data(
-        self, data: pd.DataFrame, country_map: Dict[str, object]
+            self, data: pd.DataFrame, country_map: Dict[str, object]
     ) -> List[Dict[str, object]]:
         """
-        Build a list of dictionaries representing movie records to be inserted into MovieModel.
-
-        :param data: The preprocessed DataFrame.
-        :param country_map: A mapping of country codes to CountryModel instances.
-        :return: A list of dictionaries, each representing a new movie record.
+        Build movie records ensuring all NOT NULL fields are populated.
         """
+
         movies_data: List[Dict[str, object]] = []
-        for _, row in tqdm(
-            data.iterrows(), total=data.shape[0], desc="Processing movies"
+
+        for i, (_, row) in enumerate(
+                tqdm(data.iterrows(), total=data.shape[0], desc="Processing movies")
         ):
             country = country_map[row["country"]]
+
+            release_date = row["date_x"]
+            year = release_date.year if release_date else 1970
+
+            overview = row["overview"] if isinstance(row["overview"], str) else ""
+            description = overview if overview else "No description available"
+
+            # imdb должен быть уникальным (в модели unique=True)
+            score = row["score"]
+
+            imdb = float(score) / 10 if not pd.isna(score) else None
+
+            # runtime в CSV нет → ставим дефолт
+            runtime = 120
+
             movie = {
                 "name": row["names"],
-                "date": row["date_x"],
-                "score": float(row["score"]),
-                "overview": row["overview"],
+
+                "year": year,
+                "time": runtime,
+                "imdb": imdb,
+                "description": description,
+
+                "votes": 0,
+                "price": 9.99,
+
+                "date": release_date,
+                "score": float(row["score"]) if not pd.isna(row["score"]) else None,
+                "overview": overview,
                 "status": row["status"],
-                "budget": float(row["budget_x"]),
-                "revenue": float(row["revenue"]),
+                "budget": float(row["budget_x"]) if not pd.isna(row["budget_x"]) else None,
+                "revenue": float(row["revenue"]) if not pd.isna(row["revenue"]) else None,
                 "country_id": country.id,
             }
+
             movies_data.append(movie)
+
         return movies_data
 
     def _prepare_associations(

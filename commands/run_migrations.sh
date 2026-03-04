@@ -59,5 +59,5 @@ fi
 
 # Run database saver script
 echo "Running database saver script..."
-python -m database.populate
+python -m src.database.populate
 echo "Database saver script completed."

@@ -1,11 +1,11 @@
 FROM golang:bookworm
 
 # Install necessary dependencies
-RUN apt update && apt install -y  \
-    golang-go \
-    wget \
-    dos2unix \
-    && apt clean
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends wget dos2unix \
+ && rm -rf /var/lib/apt/lists/*
 
 # Install MailHog using Go
 RUN go install github.com/mailhog/MailHog@latest

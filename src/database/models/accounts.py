@@ -12,7 +12,6 @@ from sqlalchemy import (
     func,
     Text,
     Date,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
@@ -122,17 +121,28 @@ class UserModel(Base):
     )
 
     # Movie interactions
-    likes: Mapped[List["MovieLikeModel"]] = relationship(
-        "MovieLikeModel", back_populates="user", cascade="all, delete-orphan"
+    movie_likes: Mapped[list["MovieLikeModel"]] = relationship(
+        "MovieLikeModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
-    comments: Mapped[List["MovieCommentModel"]] = relationship(
-        "MovieCommentModel", back_populates="user", cascade="all, delete-orphan"
+
+    movie_comments: Mapped[list["MovieCommentModel"]] = relationship(
+        "MovieCommentModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
-    favorites: Mapped[List["MovieFavoriteModel"]] = relationship(
-        "MovieFavoriteModel", back_populates="user", cascade="all, delete-orphan"
+
+    favorite_movies: Mapped[list["MovieFavoriteModel"]] = relationship(
+        "MovieFavoriteModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
-    ratings: Mapped[List["MovieRatingModel"]] = relationship(
-        "MovieRatingModel", back_populates="user", cascade="all, delete-orphan"
+
+    movie_ratings: Mapped[list["MovieRatingModel"]] = relationship(
+        "MovieRatingModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     @property
