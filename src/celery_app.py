@@ -31,6 +31,10 @@ celery_app.conf.beat_schedule = {
         "task": "src.tasks.cleanup_tasks.cleanup_expired_password_reset_tokens",
         "schedule": crontab(minute="*/30"),
     },
+    "cleanup-expired-revoked-access-tokens": {
+        "task": "src.tasks.cleanup_tasks.cleanup_expired_revoked_access_tokens",
+        "schedule": crontab(hour=0, minute=15),
+    },
     "cleanup-expired-refresh-tokens": {
         "task": "src.tasks.cleanup_tasks.cleanup_expired_refresh_tokens",
         "schedule": crontab(hour=0, minute=0),

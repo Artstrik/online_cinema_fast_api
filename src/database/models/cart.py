@@ -50,7 +50,7 @@ class CartItemModel(Base):
         ForeignKey("carts.id", ondelete="CASCADE"), nullable=False
     )
     movie_id: Mapped[int] = mapped_column(
-        ForeignKey("movies.id", ondelete="CASCADE"), nullable=False
+        ForeignKey("movies.id", ondelete="RESTRICT"), nullable=False
     )
     added_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

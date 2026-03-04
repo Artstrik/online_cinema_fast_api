@@ -21,6 +21,7 @@ from src.database import (
     ActivationTokenModel,
     PasswordResetTokenModel,
     RefreshTokenModel,
+    RevokedAccessTokenModel,
 )
 from src.exceptions.security import BaseSecurityError
 from src.notifications import EmailSenderInterface
@@ -44,7 +45,7 @@ from src.schemas import (
     AdminChangeUserGroupResponseSchema,
 )
 from src.security.interfaces import JWTAuthManagerInterface
-from src.security.http import get_current_active_user, require_roles
+from src.security.http import get_current_active_user, require_roles, get_token
 
 router = APIRouter()
 
@@ -604,25 +605,58 @@ async def refresh_access_token(
     "/logout/",
     response_model=LogoutResponseSchema,
     summary="Logout user",
-    description="Invalidate refresh token and logout user.",
+    description="Invalidate refresh token and revoke current access token.",
 )
 async def logout_user(
     token_data: LogoutRequestSchema,
+    access_token: str = Depends(get_token),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
     db: AsyncSession = Depends(get_db),
-    _: UserModel = Depends(get_current_active_user),
+    current_user: UserModel = Depends(get_current_active_user),
 ) -> LogoutResponseSchema:
+
+    # 1) Validate refresh token exists and belongs to current user
     stmt = select(RefreshTokenModel).where(
         RefreshTokenModel.token == token_data.refresh_token
     )
-    result = await db.execute(stmt)
-    refresh_token_record = result.scalars().first()
+    refresh_token_record = (await db.execute(stmt)).scalars().first()
     if not refresh_token_record:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token not found."
         )
+    if refresh_token_record.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Refresh token does not belong to current user.",
+        )
 
+    # 2) Revoke (blacklist) current access token by jti until its exp
+    try:
+        payload = jwt_manager.decode_access_token(access_token)
+    except BaseSecurityError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+    if not jti or not exp:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token payload.",
+        )
+
+    expires_at = datetime.fromtimestamp(int(exp), tz=timezone.utc)
+    db.add(
+        RevokedAccessTokenModel(
+            user_id=current_user.id,
+            jti=str(jti),
+            expires_at=expires_at,
+        )
+    )
+
+    # 3) Delete refresh token (TZ requirement)
     await db.delete(refresh_token_record)
     await db.commit()
+
     return LogoutResponseSchema()
 
 

@@ -2,7 +2,7 @@
 
 # SQLAlchemy migrate
 ALEMBIC_CONFIG="/usr/src/alembic/alembic.ini"
-MIGRATIONS_DIR="/usr/src/fastapi/database/migrations/versions"
+MIGRATIONS_DIR="/usr/src/fastapi/src/database/migrations/versions"
 
 echo "Checking for changes before generating a migration..."
 
@@ -59,5 +59,5 @@ fi
 
 # Run database saver script
 echo "Running database saver script..."
-python -m database.populate
+python -m src.database.populate
 echo "Database saver script completed."

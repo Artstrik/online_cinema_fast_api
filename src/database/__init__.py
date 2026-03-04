@@ -8,6 +8,7 @@ from src.database.models.accounts import (
     ActivationTokenModel,
     PasswordResetTokenModel,
     RefreshTokenModel,
+    RevokedAccessTokenModel,
     UserProfileModel,
 )
 from src.database.models.movies import (

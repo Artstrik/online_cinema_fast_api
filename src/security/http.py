@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.dependencies import get_jwt_auth_manager
 from src.database import get_db
-from src.database.models.accounts import UserModel, UserGroupEnum
+from src.database.models.accounts import UserModel, UserGroupEnum, RevokedAccessTokenModel
 from src.exceptions.security import BaseSecurityError
 from src.security.interfaces import JWTAuthManagerInterface
 
@@ -13,10 +13,6 @@ from src.security.interfaces import JWTAuthManagerInterface
 def get_token(request: Request) -> str:
     """
     Extracts the Bearer token from the Authorization header.
-
-    :param request: FastAPI Request object.
-    :return: Extracted token string.
-    :raises HTTPException: If Authorization header is missing or invalid.
     """
     authorization: str = request.headers.get("Authorization")
 
@@ -44,20 +40,6 @@ async def get_current_active_user(
 ) -> UserModel:
     """
     Get current authenticated and active user from JWT token.
-
-    Args:
-        token: JWT access token from Authorization header
-        jwt_manager: JWT authentication manager
-        db: Database session
-
-    Returns:
-        UserModel: Authenticated and active user
-
-    Raises:
-        HTTPException:
-            - 401 if token is invalid or expired
-            - 401 if user not found
-            - 403 if user is not active
     """
     try:
         payload = jwt_manager.decode_access_token(token)
@@ -66,6 +48,23 @@ async def get_current_active_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    revoked_stmt = select(RevokedAccessTokenModel).where(RevokedAccessTokenModel.jti == jti)
+    revoked_res = await db.execute(revoked_stmt)
+    if revoked_res.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -102,9 +101,6 @@ async def get_current_active_user_optional(
 ) -> UserModel | None:
     """
     Return current active user when Authorization header is present.
-
-    Allows public endpoints to work for anonymous users, while still returning
-    user-specific flags when a valid token is supplied.
     """
     authorization: str | None = request.headers.get("Authorization")
     if not authorization:
@@ -118,6 +114,15 @@ async def get_current_active_user_optional(
         return None
 
     if user_id is None:
+        return None
+
+    jti = payload.get("jti")
+    if not jti:
+        return None
+
+    revoked_stmt = select(RevokedAccessTokenModel).where(RevokedAccessTokenModel.jti == jti)
+    revoked_res = await db.execute(revoked_stmt)
+    if revoked_res.scalars().first():
         return None
 
     stmt = select(UserModel).where(UserModel.id == user_id)

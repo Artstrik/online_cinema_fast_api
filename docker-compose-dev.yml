@@ -1,6 +1,6 @@
 services:
   db:
-    image: 'postgres:latest'
+    image: postgres:17
     container_name: postgres_theater
     env_file:
       - .env
@@ -12,7 +12,7 @@ services:
     networks:
       - theater_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 || exit 1" ]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,61 +33,19 @@ services:
     networks:
       - theater_network
 
-  web:
-    restart: always
-    build: .
-    container_name: backend_theater
-    command: [ "/bin/bash", "/commands/run_web_server_dev.sh" ]
-    env_file:
-      - .env
-    environment:
-      - LOG_LEVEL=debug
-      - PYTHONPATH=/usr/src/fastapi
-      - WATCHFILES_FORCE_POLLING=true
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
     ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    volumes:
-      - ./src:/usr/src/fastapi
+      - "6379:6379"
     networks:
       - theater_network
-
-  migrator:
-    build: .
-    container_name: alembic_migrator_theater
-    command: ["/bin/bash", "/commands/run_migrations.sh"]
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./src:/usr/src/fastapi
-    env_file:
-      - .env
-    environment:
-      - PYTHONPATH=/usr/src/fastapi
-    networks:
-      - theater_network
-
-  mailhog:
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
-    build:
-      context: .
-      dockerfile: ./docker/mailhog/Dockerfile
-    container_name: mailhog_theater
-    command: ["/bin/bash", "-c", "/commands/setup_mailhog_auth.sh && ~/go/bin/MailHog"]
-    ports:
-      - "8025:8025"
-      - "1025:1025"
-    env_file:
-      - .env
-    environment:
-      MH_AUTH_FILE: /mailhog.auth
-    networks:
-      - theater_network
 
   minio:
     image: minio/minio:latest
@@ -100,60 +58,13 @@ services:
       - .env
     volumes:
       - minio_data:/data
+    networks:
+      - theater_network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - theater_network
-
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis_theater
-    ports:
-      - "6379:6379"
-    networks:
-      - theater_network
-
-  celery_worker:
-    build: .
-    container_name: celery_worker_theater
-    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "worker", "-l", "info"]
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - db
-    networks:
-      - theater_network
-
-  celery_beat:
-    build: .
-    container_name: celery_beat_theater
-    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "beat", "-l", "info"]
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - db
-    networks:
-      - theater_network
-
-  flower:
-    build: .
-    container_name: flower_theater
-    command: ["poetry", "run", "celery", "-A", "src.selery_app.celery_app", "flower", "--port=5555"]
-    env_file:
-      - .env
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-      - celery_worker
-    networks:
-      - theater_network
 
   minio_mc:
     build:
@@ -168,6 +79,126 @@ services:
       - .env
     networks:
       - theater_network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog_theater
+    restart: always
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - theater_network
+
+  web:
+    restart: always
+    build: .
+    container_name: backend_theater
+    command: ["/bin/bash", "/commands/run_web_server_dev.sh"]
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/usr/src/fastapi
+      - WATCHFILES_FORCE_POLLING=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # код — как раньше
+      - ./src:/usr/src/fastapi/src
+      # чтобы poetry/pyproject.toml были доступны там, где ты их ставишь в Dockerfile
+      - ./:/usr/src/poetry
+    networks:
+      - theater_network
+
+  migrator:
+    build: .
+    container_name: alembic_migrator_theater
+    command: ["/bin/bash", "/commands/run_migrations.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi/src
+    volumes:
+      - ./src:/usr/src/fastapi/src
+      - ./:/usr/src/poetry
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    working_dir: /usr/src/poetry
+    command: ["poetry", "run", "celery", "-A", "src.celery_app.celery_app", "worker", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi/src
+      - ./:/usr/src/poetry
+    networks:
+      - theater_network
+    restart: always
+
+  celery_beat:
+    build: .
+    container_name: celery_beat_theater
+    working_dir: /usr/src/poetry
+    command: ["poetry", "run", "celery", "-A", "src.celery_app.celery_app", "beat", "-l", "info"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi/src
+      - ./:/usr/src/poetry
+    networks:
+      - theater_network
+    restart: always
+
+  flower:
+    build: .
+    container_name: flower_theater
+    working_dir: /usr/src/poetry
+    command: ["poetry", "run", "celery", "-A", "src.celery_app.celery_app", "flower", "--port=5555"]
+    env_file:
+      - .env
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    volumes:
+      - ./src:/usr/src/fastapi/src
+      - ./:/usr/src/poetry
+    networks:
+      - theater_network
+    restart: always
 
 volumes:
   postgres_theater_data:
