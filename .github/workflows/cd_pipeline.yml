@@ -1,0 +1,35 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+
+            cd /home/ubuntu/online_cinema_fast_api
+
+            git fetch origin
+            git reset --hard origin/main
+
+            docker pull ${{ secrets.DOCKER_USERNAME }}/online-cinema-api:latest
+
+            docker compose -f docker-compose-prod.yml down
+
+            docker compose -f docker-compose-prod.yml up -d
