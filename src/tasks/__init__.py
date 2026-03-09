@@ -6,3 +6,5 @@ This module contains Celery tasks for:
 - Email notifications
 - User notifications
 """
+
+from .cleanup_tasks import *
