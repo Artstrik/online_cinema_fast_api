@@ -1,105 +1,441 @@
-# 🎬 FastAPI Movies E-commerce Platform
+# 🎬 Online Cinema API
 
-<div align="center">
+Production-ready backend service for an **Online Cinema platform** built with **FastAPI**.
 
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=flat-square&logo=fastapi)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=flat-square)
-
-**Modern e-commerce platform for movies built with FastAPI**
-
-</div>
+The system allows users to browse movies, manage favorites, purchase movies, and pay for them using Stripe.
+The platform includes a complete backend architecture with authentication, role-based access control, asynchronous processing, and containerized infrastructure.
 
 ---
 
-## 📖 About
+# 🚀 Features
 
-A full-featured e-commerce platform for digital movie sales with user authentication, shopping cart, payment processing, and more.
+## Authentication & Authorization
 
-## ✨ Planned Features
+* User registration with **email activation**
+* **JWT authentication** (access + refresh tokens)
+* Password reset via email
+* Password change with validation
+* Role-based access control
 
-- 🔐 User authentication and authorization
-- 🎬 Movie catalog with search
-- 🛒 Shopping cart
-- 💳 Payment processing (Stripe)
-- ⭐ Ratings and reviews
-- 📧 Email notifications
+User roles:
 
-## 🛠 Tech Stack
+* **USER** – standard platform user
+* **MODERATOR** – can manage movies and catalog
+* **ADMIN** – full system access including user management
 
-- **Backend**: FastAPI, Python 3.11+
-- **Database**: PostgreSQL, SQLAlchemy (async)
-- **Cache**: Redis
-- **Queue**: Celery
-- **Testing**: pytest
+---
 
-## 🚀 Quick Start
+# 🎬 Movies Catalog
 
-### Prerequisites
+Users can:
 
-- Python 3.11+
-- Poetry
-- Docker
+* Browse movies with **pagination**
+* View movie details
+* Search movies by:
 
-### Installation
+  * title
+  * description
+  * actor
+  * director
+* Filter movies by:
 
-```bash
-# Clone repository
-git clone <repo-url>
-cd fastapi-movies-ecommerce
+  * release year
+  * rating
+* Sort movies by:
 
-# Install dependencies
+  * price
+  * popularity
+  * release date
+
+Additional features:
+
+* Like / dislike movies
+* Rate movies (10-point scale)
+* Write comments
+* Add movies to favorites
+* View genres with movie counts
+
+Moderators can:
+
+* Create movies
+* Update movies
+* Delete movies (if not purchased)
+* Manage genres, actors, and directors
+
+---
+
+# 🛒 Shopping Cart
+
+Users can:
+
+* Add movies to cart
+* Remove movies
+* Clear cart
+* View cart contents
+
+Validation rules:
+
+* Prevent duplicate movies
+* Prevent purchasing already owned movies
+* Ensure all movies are available
+
+---
+
+# 📦 Orders
+
+Users can:
+
+* Create orders from cart
+* View order history
+* Cancel orders before payment
+
+Order statuses:
+
+```
+pending
+paid
+canceled
+```
+
+Each order stores:
+
+* list of purchased movies
+* price at order time
+* total order cost
+
+---
+
+# 💳 Payments
+
+Payments are processed via **Stripe**.
+
+Features:
+
+* Stripe Checkout integration
+* Payment confirmation
+* Payment history
+* Webhook validation
+* Automatic order status updates
+
+Payment statuses:
+
+```
+successful
+canceled
+refunded
+```
+
+---
+
+# 🏗 Architecture
+
+The project follows **modular backend architecture** with clear separation of responsibilities between API layer, business logic, infrastructure services, and database access.
+
+Project structure:
+
+```
+online_cinema_fast_api
+│
+├── .github
+│   └── workflows
+│       ├── ci_pipeline.yml
+│       └── cd_pipeline.yml
+│
+├── commands                    # Utility scripts for running services
+│   ├── run_celery_beat.sh
+│   ├── run_celery_workers.sh
+│   ├── run_migrations.sh
+│   ├── run_web_server_dev.sh
+│   ├── run_web_server_prod.sh
+│   ├── set_nginx_basic_auth.sh
+│   ├── setup_mailhog_auth.sh
+│   └── setup_minio.sh
+│
+├── configs
+│   └── nginx
+│       └── nginx.conf
+│
+├── docker                      # Docker images for infrastructure
+│   ├── mailhog
+│   │   └── Dockerfile
+│   │
+│   ├── minio_mc
+│   │   └── Dockerfile
+│   │
+│   ├── nginx
+│   │   ├── Dockerfile
+│   │   └── .env.sample
+│   │
+│   └── tests
+│       └── Dockerfile
+│
+├── src                         # Application source code
+│
+│   ├── config
+│   │   ├── dependencies.py
+│   │   └── settings.py
+│   │
+│   ├── database
+│   │   ├── migrations
+│   │   ├── models
+│   │   ├── seed_data
+│   │   ├── source
+│   │   ├── validators
+│   │   ├── populate.py
+│   │   ├── session_postgresql.py
+│   │   └── session_sqlite.py
+│   │
+│   ├── exceptions
+│   │   ├── email.py
+│   │   ├── security.py
+│   │   └── storage.py
+│   │
+│   ├── integrations
+│   │   └── stripe_client.py
+│   │
+│   ├── notifications
+│   │   ├── emails.py
+│   │   ├── interfaces.py
+│   │   └── templates
+│   │
+│   ├── routes
+│   │   ├── accounts.py
+│   │   ├── cart.py
+│   │   ├── movie_interaction.py
+│   │   ├── movies.py
+│   │   ├── orders.py
+│   │   ├── payments.py
+│   │   └── profiles.py
+│   │
+│   ├── schemas
+│   │   ├── accounts.py
+│   │   ├── cart.py
+│   │   ├── movie_interactions.py
+│   │   ├── movies.py
+│   │   ├── orders.py
+│   │   ├── payments.py
+│   │   └── profiles.py
+│   │
+│   ├── security
+│   │   ├── http.py
+│   │   ├── interfaces.py
+│   │   ├── passwords.py
+│   │   ├── token_manager.py
+│   │   └── utils.py
+│   │
+│   ├── storages
+│   │   ├── interfaces.py
+│   │   └── s3.py
+│   │
+│   ├── tasks
+│   │   └── cleanup_tasks.py
+│   │
+│   ├── tests
+│   │   ├── doubles
+│   │   ├── test_e2e
+│   │   └── test_integration
+│   │
+│   ├── validation
+│   │   ├── password.py
+│   │   └── profile.py
+│   │
+│   ├── celery_app.py
+│   └── main.py
+│
+├── docker-compose-dev.yml
+├── docker-compose-prod.yml
+├── docker-compose-tests.yml
+│
+├── Dockerfile
+├── init.sql
+│
+├── pyproject.toml
+├── poetry.lock
+│
+└── README.md
+```
+
+Architecture layers:
+
+**API Layer**
+
+* FastAPI routes
+* request validation
+* authentication dependencies
+
+**Domain / Business Logic**
+
+* services
+* validation rules
+* application logic
+
+**Infrastructure Layer**
+
+* Stripe integration
+* Celery tasks
+* email notifications
+* S3 storage (MinIO)
+
+**Persistence Layer**
+
+* PostgreSQL
+* SQLAlchemy models
+* migrations
+
+---
+
+# 🛠 Tech Stack
+
+### Backend
+
+* FastAPI
+* Python 3.11
+* SQLAlchemy (Async)
+* PostgreSQL
+
+### Infrastructure
+
+* Docker
+* Docker Compose
+* Nginx
+* Redis
+* Celery
+* MinIO (S3 compatible storage)
+
+### Authentication
+
+* JWT
+* OAuth2
+
+### Payments
+
+* Stripe
+
+### CI/CD
+
+* GitHub Actions
+* AWS EC2
+
+### Dependency Management
+
+* Poetry
+
+---
+
+# 📦 Installation
+
+Clone repository
+
+```
+git clone https://github.com/Artstrik/online_cinema_fast_api.git
+cd online_cinema_fast_api
+```
+
+Install dependencies
+
+```
 poetry install
-
-# Copy environment file
-cp .env.sample .env
-
-# Start database
-docker compose up -d
-
-# Run migrations
-poetry run alembic upgrade head
-
-# Start application
-poetry run uvicorn src.main:app --reload
 ```
 
-Visit http://localhost:8000/docs for API documentation.
-
-## 📁 Project Structure
+Run migrations
 
 ```
-src/
-├── config/          # Configuration
-├── database/        # Models & migrations
-├── routes/          # API endpoints
-├── schemas/         # Pydantic schemas
-└── tests/           # Tests
+alembic upgrade head
 ```
 
-## 🧪 Testing
+Run application
 
-```bash
-poetry run pytest
 ```
-
-## 📚 Documentation
-
-- API Docs: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue or submit a PR.
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+uvicorn src.main:app --reload
+```
 
 ---
 
-<div align="center">
-Made with ❤️ using FastAPI
-</div>
+# 🐳 Docker Setup
+
+Run the entire system with one command:
+
+```
+docker compose up --build
+```
+
+This will start:
+
+* FastAPI
+* PostgreSQL
+* Redis
+* Celery worker
+* Celery beat
+* MinIO
+* Nginx
+
+---
+
+# ☁️ Production Deployment
+
+The project supports deployment to **AWS EC2**.
+
+Production stack:
+
+```
+EC2
+│
+├── Nginx
+├── Docker Compose
+│
+├── FastAPI
+├── Redis
+├── Celery
+├── PostgreSQL
+└── MinIO
+```
+
+Deployment is automated using **GitHub Actions CI/CD**.
+
+Pipeline:
+
+```
+push → CI
+lint
+tests
+docker build
+
+↓
+
+CD
+deploy to EC2
+```
+
+---
+
+# 🧪 Testing
+
+The project includes several testing layers.
+
+Unit Tests
+Integration Tests
+End-to-End Tests
+
+Run tests:
+
+```
+pytest
+```
+
+---
+
+# 👨‍💻 Author
+
+**Artem Shlychkin**
+
+Backend Developer
+Python | FastAPI | Docker | AWS
+
+GitHub
+https://github.com/Artstrik
+
+---
+
+# 📜 License
+
+This project is licensed under the MIT License.
