@@ -3,6 +3,7 @@ name = "online_cinema"
 version = "0.1.0"
 description = "Online Cinema platform project"
 authors = ["Artem Shlychkin <artem.shlychkin1995@gmail.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
