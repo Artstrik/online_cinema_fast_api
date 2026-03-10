@@ -7,4 +7,4 @@ This module contains Celery tasks for:
 - User notifications
 """
 
-from .cleanup_tasks import *
+from .cleanup_tasks import cleanup_expired_refresh_tokens

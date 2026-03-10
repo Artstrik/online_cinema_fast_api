@@ -148,6 +148,7 @@ class MovieInFavoritesSchema(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class FavoritesListResponseSchema(BaseModel):
     """Unified favorites list schema (route-friendly)."""
     favorites: List[MovieInFavoritesSchema]

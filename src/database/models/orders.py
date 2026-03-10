@@ -12,7 +12,7 @@ from sqlalchemy.sql import func
 from src.database.models.base import Base
 
 if TYPE_CHECKING:
-    from src.database.models.payments import PaymentModel
+    from src.database.models.payments import PaymentModel, PaymentItemModel
     from src.database.models.accounts import UserModel
     from src.database.models.movies import MovieModel
 
