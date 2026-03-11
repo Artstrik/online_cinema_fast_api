@@ -23,7 +23,7 @@ jobs:
 
           script: |
 
-            cd /home/ubuntu/online_cinema_fast_api
+            cd /home/ubuntu/src/online_cinema_fast_api
 
             git fetch origin
             git reset --hard origin/main
