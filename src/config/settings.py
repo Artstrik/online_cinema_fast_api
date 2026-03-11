@@ -17,19 +17,22 @@ class BaseAppSettings(BaseSettings):
     ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME: str = "activation_complete.html"
     PASSWORD_RESET_TEMPLATE_NAME: str = "password_reset_request.html"
     PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
+    MODERATOR_ALERT_EMAIL_TEMPLATE_NAME: str = "moderator_alert_email.html"
 
     LOGIN_TIME_DAYS: int = 7
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://127.0.0.1:8080")
 
+    # Email налаштування
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "host")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 25))
     EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser")
     EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
-    MAILHOG_API_PORT: int = os.getenv("MAILHOG_API_PORT", 8025)
+    MAILHOG_API_PORT: int = int(os.getenv("MAILHOG_API_PORT", 8025))
 
+    # S3/Minio налаштування
     S3_STORAGE_HOST: str = os.getenv("MINIO_HOST", "minio-theater")
-    S3_STORAGE_PORT: int = os.getenv("MINIO_PORT", 9000)
+    S3_STORAGE_PORT: int = int(os.getenv("MINIO_PORT", 9000))
     S3_STORAGE_ACCESS_KEY: str = os.getenv("MINIO_ROOT_USER", "minioadmin")
     S3_STORAGE_SECRET_KEY: str = os.getenv("MINIO_ROOT_PASSWORD", "some_password")
     S3_BUCKET_NAME: str = os.getenv("MINIO_STORAGE", "theater-storage")
@@ -73,12 +76,52 @@ class Settings(BaseAppSettings):
 
 
 class TestingSettings(BaseAppSettings):
-    SECRET_KEY_ACCESS: str = "SECRET_KEY_ACCESS"
-    SECRET_KEY_REFRESH: str = "SECRET_KEY_REFRESH"
-    JWT_SIGNING_ALGORITHM: str = "HS256"
+    # PostgreSQL для тестів
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "password")
+    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "postgres_test")
+    POSTGRES_DB_PORT: int = int(os.getenv("POSTGRES_DB_PORT", 5432))
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "test_db")
+
+    # JWT для тестів
+    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", "test_secret_key_access_32_chars_long_enough")
+    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", "test_secret_key_refresh_32_chars_long_enough")
+    JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
+
+    # Redis для тестів
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "redis_test")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
+
+    # Email для тестів (MailHog)
+    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "mailhog_theater_test")
+    EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
+    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
+    MAILHOG_API_PORT: int = int(os.getenv("MAILHOG_API_PORT", 8025))
+
+    # Minio для тестів
+    S3_STORAGE_HOST: str = os.getenv("MINIO_HOST", "minio-theater-test")
+    S3_STORAGE_PORT: int = int(os.getenv("MINIO_PORT", 9000))
+    S3_STORAGE_ACCESS_KEY: str = os.getenv("MINIO_ROOT_USER", "minioadmin")
+    S3_STORAGE_SECRET_KEY: str = os.getenv("MINIO_ROOT_PASSWORD", "some_password")
+    S3_BUCKET_NAME: str = os.getenv("MINIO_STORAGE", "theater-storage")
+
+    # Stripe для тестів (порожні)
+    STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_PUBLISHABLE_KEY: str = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    STRIPE_WEBHOOK_SECRET: str = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_DB_PORT}/{self.POSTGRES_DB}"
+        )
 
     def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
-        object.__setattr__(self, "PATH_TO_DB", ":memory:")
+        object.__setattr__(self, "PATH_TO_DB", "/tmp/test_theater.db")
         object.__setattr__(
             self,
             "PATH_TO_MOVIES_CSV",

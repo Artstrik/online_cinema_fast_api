@@ -42,24 +42,29 @@ class EmailSender(EmailSenderInterface):
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
     async def _send_email(
-        self, recipient: str, subject: str, html_content: str
+            self, recipient: str, subject: str, html_content: str
     ) -> None:
         message = MIMEMultipart()
-        message["From"] = self._email
+        sender = self._email or "noreply@example.com"
+        message["From"] = sender
         message["To"] = recipient
         message["Subject"] = subject
         message.attach(MIMEText(html_content, "html"))
 
         try:
             smtp = aiosmtplib.SMTP(
-                hostname=self._hostname, port=self._port, start_tls=self._use_tls
+                hostname=self._hostname,
+                port=self._port,
+                start_tls=self._use_tls,
             )
             await smtp.connect()
-            if self._use_tls:
-                await smtp.starttls()
-            await smtp.login(self._email, self._password)
-            await smtp.sendmail(self._email, [recipient], message.as_string())
+
+            if self._email and self._password:
+                await smtp.login(self._email, self._password)
+
+            await smtp.sendmail(sender, [recipient], message.as_string())
             await smtp.quit()
+
         except aiosmtplib.SMTPException as error:
             logging.error(f"Failed to send email to {recipient}: {error}")
             raise BaseEmailError(f"Failed to send email to {recipient}: {error}")
@@ -85,7 +90,7 @@ class EmailSender(EmailSenderInterface):
     async def send_password_reset_complete_email(self, email: str, login_link: str) -> None:
         template = self._env.get_template(self._password_complete_email_template_name)
         html_content = template.render(email=email, login_link=login_link)
-        subject = "Password Reset Successfully"
+        subject = "Your Password Has Been Successfully Reset"
         await self._send_email(email, subject, html_content)
 
     async def send_moderator_alert_email(self, email: str, subject: str, message: str) -> None:

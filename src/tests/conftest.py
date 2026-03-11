@@ -18,7 +18,9 @@ from src.database import (
     UserGroupModel,
 )
 from src.database.populate import CSVDatabaseSeeder
-from src.main import app
+import src.main
+
+app = src.main.app
 from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager
 from src.storages import S3StorageClient
