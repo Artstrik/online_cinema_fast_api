@@ -1,0 +1,139 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:17
+    container_name: postgres_theater
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_theater_data:/var/lib/postgresql/data
+    networks:
+      - theater_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_theater
+    restart: always
+    networks:
+      - theater_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio_theater
+    command: server /data --console-address ":9001"
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - minio_data:/data
+    networks:
+      - theater_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: artstrik/online-cinema-api:latest
+    container_name: backend_theater
+    restart: always
+    command: ["/bin/bash", "/commands/run_web_server_prod.sh"]
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=info
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - theater_network
+
+  migrator:
+    build: .
+    container_name: alembic_migrator_theater
+    command: ["/bin/bash", "/commands/run_migrations.sh"]
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - theater_network
+
+  celery_worker:
+    build: .
+    container_name: celery_worker_theater
+    restart: always
+    command: celery -A src.celery_app worker --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - theater_network
+
+  celery_beat:
+    build: .
+    container_name: celery_beat_theater
+    restart: always
+    command: celery -A src.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/usr/src/fastapi
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - theater_network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+    networks:
+      - theater_network
+
+volumes:
+  postgres_theater_data:
+  minio_data:
+
+networks:
+  theater_network:
+    driver: bridge

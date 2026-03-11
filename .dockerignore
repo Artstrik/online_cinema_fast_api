@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.env
+.env.*
+.venv/
+venv/
+
+# Tests
+tests/
+htmlcov/
+.coverage
+.cache
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+# Temporary directories
+tmp/
+
+# Test coverage
+coverage/
+
+# Node dependencies (if frontend tools are used)
+node_modules/
