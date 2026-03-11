@@ -121,6 +121,8 @@ services:
       dockerfile: docker/nginx/Dockerfile
     container_name: nginx
     restart: always
+    env_file:
+      - ./docker/nginx/.env
     ports:
       - "80:80"
     volumes:
