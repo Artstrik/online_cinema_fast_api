@@ -80,6 +80,7 @@ router = APIRouter()
 async def register_user(
     user_data: UserRegistrationRequestSchema,
     db: AsyncSession = Depends(get_db),
+    settings: BaseAppSettings = Depends(get_settings),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> UserRegistrationResponseSchema:
     """
@@ -121,19 +122,23 @@ async def register_user(
         )
 
     try:
-        new_user = UserModel.create(
+        new_user = UserModel(
             email=str(user_data.email),
-            raw_password=user_data.password,
             group_id=user_group.id,
+            is_active=False
         )
+
+        new_user.password = user_data.password
+
         db.add(new_user)
         await db.flush()
 
-        activation_token = ActivationTokenModel(user_id=new_user.id)
+        activation_token = ActivationTokenModel.create(user_id=new_user.id)
         db.add(activation_token)
 
         await db.commit()
         await db.refresh(new_user)
+        await db.refresh(activation_token)
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
@@ -141,11 +146,20 @@ async def register_user(
             detail="An error occurred during user creation.",
         ) from e
     else:
-        activation_link = "http://127.0.0.1/accounts/activate/"
 
-        await email_sender.send_activation_email(new_user.email, activation_link)
+        activation_link = (
+            f"{settings.APP_BASE_URL}/accounts/activate/?token={activation_token.token}"
+        )
 
-        return UserRegistrationResponseSchema.model_validate(new_user)
+        await email_sender.send_activation_email(
+            str(new_user.email),
+            activation_link,
+        )
+
+        return UserRegistrationResponseSchema(
+            id=new_user.id,
+            email=new_user.email,
+        )
 
 
 @router.post(
@@ -260,6 +274,7 @@ async def activate_account(
 async def request_password_reset_token(
     data: PasswordResetRequestSchema,
     db: AsyncSession = Depends(get_db),
+    settings: BaseAppSettings = Depends(get_settings),
     email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
 ) -> MessageResponseSchema:
     """
@@ -291,14 +306,18 @@ async def request_password_reset_token(
         )
     )
 
-    reset_token = PasswordResetTokenModel(user_id=cast(int, user.id))
+    reset_token = PasswordResetTokenModel.create(user_id=cast(int, user.id))
     db.add(reset_token)
     await db.commit()
+    await db.refresh(reset_token)
 
-    password_reset_complete_link = "http://127.0.0.1/accounts/password-reset-complete/"
+    reset_link = (
+        f"{settings.APP_BASE_URL}/accounts/reset-password/?token={reset_token.token}"
+    )
 
     await email_sender.send_password_reset_email(
-        str(data.email), password_reset_complete_link
+        str(data.email),
+        reset_link,
     )
 
     return MessageResponseSchema(
@@ -497,12 +516,17 @@ async def login_user(
     jwt_refresh_token = jwt_manager.create_refresh_token({"user_id": user.id})
 
     try:
+        await db.execute(
+            delete(RefreshTokenModel).where(RefreshTokenModel.user_id == user.id)
+        )
+
         refresh_token = RefreshTokenModel.create(
             user_id=user.id,
             days_valid=settings.LOGIN_TIME_DAYS,
             token=jwt_refresh_token,
         )
         db.add(refresh_token)
+
         await db.flush()
         await db.commit()
     except SQLAlchemyError:
@@ -615,7 +639,6 @@ async def logout_user(
     current_user: UserModel = Depends(get_current_active_user),
 ) -> LogoutResponseSchema:
 
-    # 1) Validate refresh token exists and belongs to current user
     stmt = select(RefreshTokenModel).where(
         RefreshTokenModel.token == token_data.refresh_token
     )
@@ -630,7 +653,6 @@ async def logout_user(
             detail="Refresh token does not belong to current user.",
         )
 
-    # 2) Revoke (blacklist) current access token by jti until its exp
     try:
         payload = jwt_manager.decode_access_token(access_token)
     except BaseSecurityError as e:
@@ -653,7 +675,6 @@ async def logout_user(
         )
     )
 
-    # 3) Delete refresh token (TZ requirement)
     await db.delete(refresh_token_record)
     await db.commit()
 
@@ -682,12 +703,14 @@ async def resend_activation_token(
     await db.execute(
         delete(ActivationTokenModel).where(ActivationTokenModel.user_id == user.id)
     )
-    new_token = ActivationTokenModel(user_id=user.id)
+    new_token = ActivationTokenModel.create(user_id=user.id)
     db.add(new_token)
     await db.commit()
 
-    activation_link = "http://127.0.0.1/accounts/activate/"
-    await email_sender.send_activation_email(str(data.email), activation_link)
+    await email_sender.send_activation_email(
+        str(data.email),
+        str(new_token.token),
+    )
 
     return MessageResponseSchema(
         message="If your account is not active, a new activation email will be sent."
